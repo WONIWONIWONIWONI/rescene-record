@@ -25,6 +25,10 @@
 #rescene-record #rr-tooltip[hidden],#rescene-record #mts-tooltip[hidden]{display:none}
 #rescene-record .rr-tip-row{display:inline-flex;gap:10px;min-width:150px;margin-right:14px}
 @media(max-width:500px){#rescene-record .rr-main{padding:16px 10px 0}#rescene-record .rr-panel{padding:12px}#rescene-record #rr-chart,#rescene-record #mts-chart{height:300px}#rescene-record #rr-legend{flex-wrap:nowrap;overflow-x:auto;gap:6px;padding-bottom:6px}#rescene-record #rr-legend button{flex-shrink:0;padding:5px 7px;font-size:12px}#rescene-record #rr-tooltip{max-height:125px;font-size:12px}#rescene-record .rr-tip-row{min-width:125px}#rescene-record .rr-chart-head{gap:8px}#rescene-record .rr-period button{padding:5px 7px}}
+</style><style>
+#rescene-record .mts-desk{touch-action:pan-y}
+#rescene-record .mts-plot,#rescene-record .mts-plot *{touch-action:none;overscroll-behavior:contain}
+#rescene-record #mts-chart{-webkit-user-select:none;-webkit-touch-callout:none}
 </style><header class="rr-top"><div class="rr-brand">RESCENE<span> RECORD.</span><small>리센느 기록실</small></div><span class="rr-proto">PUBLIC ARCHIVE</span></header>
 <div class="rr-notice"><b>리센느의 순간들을 기록합니다.</b> · 공개 차트 기록만 표시합니다. 빈 구간은 추정하지 않습니다.</div>
 <main class="rr-main">
