@@ -9,8 +9,10 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 * * * *'
-    - cron: '43 19 * * 6'
+    # UTC; hourly collection, with Sunday 00:01 KST reserved for backfill.
+    - cron: '1 0-14,16-23 * * *'
+    - cron: '1 15 * * 0-5'
+    - cron: '1 15 * * 6'
 permissions:
   contents: write
   pages: write
@@ -35,10 +37,10 @@ jobs:
           BACKFILL: ${{ inputs.backfill }}
           SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ "$BACKFILL" = 'true' ] || [ "$SCHEDULE" = '43 19 * * 6' ]; then
-            python scripts/collect.py --backfill
+          if [ "$BACKFILL" = 'true' ] || [ "$SCHEDULE" = '1 15 * * 6' ]; then
+            python scripts/scheduled_collect.py --backfill
           else
-            python scripts/collect.py
+            python scripts/scheduled_collect.py
           fi
       - run: python -m unittest discover -s tests && python scripts/build.py
       - uses: actions/setup-node@v4
