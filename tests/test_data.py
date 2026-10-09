@@ -40,4 +40,28 @@ class DataTests(unittest.TestCase):
      self.assertGreaterEqual(time[:10],'2024-03-26')
      self.assertTrue(p['rank'] is None or isinstance(p['rank'],int) and p['rank']>0)
      self.assertIn(p['status'],['ranked','out'])
+ def test_platform_validation_prevents_mixed_sources(self):
+  for key,(platform,route,_,_,_) in m.EXTRA.items():
+   payload={'platform':platform,'chart':platform.upper()+'_'+route.replace('-','_').upper()+'_CHART'}
+   m.validate_extra(payload,key)
+   with self.assertRaises(ValueError):m.validate_extra(dict(payload,platform='melon'),key)
+   with self.assertRaises(ValueError):m.validate_extra(dict(payload,pagination={'hasNextPage':True}),key)
+ def test_external_weekly_period_ends_after_six_days(self):
+  for key in ['circle-digital-weekly','youtube-track-weekly','youtube-video-weekly']:
+   self.assertEqual(m.observation_time({'time':'2024-03-22T00:00:00'},key),('2024-03-28T00:00:00','2024-03-22T00:00:00'))
+ def test_platform_catalog_and_chart_keys(self):
+  manifest=json.loads((ROOT/'data/manifest.json').read_text())
+  if 'platforms' not in manifest:return
+  ids={s['id'] for s in manifest['songs']}
+  self.assertEqual(len(ids),len(manifest['songs']))
+  self.assertEqual(len(manifest['platforms']),7)
+  keys=[k for p in manifest['platforms'] for k in p['charts']]
+  self.assertEqual(set(keys),set(manifest['charts']))
+  self.assertEqual(len(keys),len(set(keys)))
+  for platform in manifest['platforms']:
+   for key in platform['charts']:
+    c=json.loads((ROOT/'data'/f'{key}.json').read_text())
+    self.assertEqual(c['platform'],platform['id'])
+    self.assertIn(c['unit'],['hour','day','week','month','year'])
+    self.assertTrue(set(c['songs'])<=ids)
 if __name__=='__main__':unittest.main()
