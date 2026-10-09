@@ -1,0 +1,12 @@
+const {parseHTML}=require('linkedom');const fs=require('node:fs');const vm=require('node:vm');const assert=require('node:assert/strict');
+const path=require('node:path'),root=path.resolve(__dirname,'..');const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const {document,window}=parseHTML(html);let width=900;
+window.HTMLElement.prototype.getBoundingClientRect=function(){return {width,left:0};};window.SVGElement.prototype.getBoundingClientRect=function(){return {width,left:0};};
+document.getElementById('rr-data').textContent=require('node:zlib').gunzipSync(Buffer.from(document.getElementById('rr-data').textContent,'base64')).toString();
+const context=vm.createContext({document,window,console,Date,Set,Math,JSON,ResizeObserver:class{observe(){}}});vm.runInContext(fs.readFileSync(path.join(root,'app.js'),'utf8'),context);const $=id=>document.getElementById(id);let n=JSON.parse($('rr-data').textContent).manifest.songs.length;
+assert.equal($('rr-legend').children.length,n);assert.equal($('rr-history').children.length,n);assert.match($('rr-chart-sub').textContent,/2024.03.26/);
+for(const b of $('rr-tabs').children){$('rr-tabs').onclick({target:b});assert.equal(b.getAttribute('aria-pressed'),'true');assert.equal($('rr-history').children.length,n);assert.ok(!$('rr-chart').innerHTML.includes('NaN'));assert.ok(!$('rr-chart').innerHTML.includes('Infinity'));}
+$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="daily"]')});
+const song=$('rr-legend').children[0];$('rr-legend').onclick({target:song});assert.equal($('rr-legend').children[0].getAttribute('aria-pressed'),'false');$('rr-show-all').onclick();assert.equal($('rr-legend').children[0].getAttribute('aria-pressed'),'true');
+$('rr-period').onclick({target:$('rr-period').querySelector('[data-period="30"]')});assert.ok(!$('rr-chart-sub').textContent.startsWith('2024.03.26'));$('rr-full').checked=true;$('rr-full').onchange();assert.match($('rr-chart').innerHTML,/1000/);
+width=320;$('rr-full').onchange();assert.match($('rr-chart').getAttribute('viewBox'),/320/);assert.ok(!$('rr-chart').innerHTML.includes('NaN'));if($('rr-chart').onpointerdown)$('rr-chart').onpointerdown({clientX:160});assert.ok($('rr-detail').textContent.includes('KST'));
+assert.ok(!html.includes('Math.sin'));assert.ok(!html.includes('가상 예시'));console.log('UI: seven charts, all tracks, periods, legend, scale, 320px SVG and same-time inspection pass');

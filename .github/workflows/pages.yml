@@ -1,0 +1,69 @@
+name: Collect charts and publish Pages
+on:
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: Refresh all public song histories (slower)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 * * * *'
+    - cron: '43 19 * * 6'
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: rescene-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Collect available public records
+        env:
+          BACKFILL: ${{ inputs.backfill }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$BACKFILL" = 'true' ] || [ "$SCHEDULE" = '43 19 * * 6' ]; then
+            python scripts/collect.py --backfill
+          else
+            python scripts/collect.py
+          fi
+      - run: python -m unittest discover -s tests && python scripts/build.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci && npm test
+      - name: Retain chart observations
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update RESCENE public chart records'
+            git push
+          fi
+      - uses: actions/configure-pages@v5
+      - name: Prepare static site
+        run: |
+          mkdir public
+          cp index.html public/index.html
+          touch public/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

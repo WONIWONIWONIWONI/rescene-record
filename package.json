@@ -1,0 +1,1 @@
+{"name":"rescene-record","private":true,"version":"1.0.0","scripts":{"test":"node tests/ui.cjs","build":"python scripts/build.py"},"devDependencies":{"linkedom":"0.18.12"}}

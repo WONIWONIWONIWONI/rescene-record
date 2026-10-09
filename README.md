@@ -1,2 +1,40 @@
-# rescene-record
-RESCENE 전곡의 멜론 차트 기록실 · 데뷔일부터 TOP100, HOT100, 일간, 주간, 월간, 연간 비교
+# RESCENE RECORD · 리센느 기록실
+
+리센느 전곡을 차트별로 함께 비교하는 비공식 팬페이지입니다. 기존 투표 트래커와 별도 저장소에 배포합니다.
+
+- TOP100, HOT100 30일·100일, 일간, 주간, 월간, 확정 연간 차트
+- 기본 기간: 2024-03-26 데뷔일부터 마지막 집계까지 (KST)
+- 전곡 범례, 표시·숨기기, 기간 선택, 일간 1–1,000위 눈금
+- 같은 제목의 다른 녹음·언어·인스트루멘털은 멜론 곡 ID로 구분
+- 순위는 공개 자료의 실제 관측값만 저장. 누락 구간을 보간하거나 연간 순위를 계산하지 않음
+
+## 데이터
+
+곡 목록: [Melon 리센느 아티스트 페이지](https://www.melon.com/artist/song.htm?artistId=3709231). 순위·과거 기록: [가이섬의 멜론 차트](https://xn--o39an51b2re.com/chart/melon/daily). 사이트 하단과 각 차트에 출처를 표시합니다. 공개 페이지에 포함된 JSON을 읽으며 공식 멜론 API를 사용한다고 주장하지 않습니다.
+
+일간 최신 표는 1,000위, 다른 최신 표는 100위까지입니다. 과거 곡별 기록에 100위 밖 순위가 제공되면 그 실제 순위도 그대로 표시합니다. 주간·월간·연간 그래프의 점은 집계 기간 끝 날짜에 놓고 원본 기간 시작 날짜를 함께 저장합니다. 누락 시점은 기록 없음, 완전한 최신 표에 없는 곡은 집계 범위 밖, HOT100 대상 기간이 지난 곡은 대상 기간 종료로 구분합니다. 과거 기록의 최고 순위는 확인된 관측값 기준이며 전체 기간의 완전성을 보장하지 않습니다. 2026년처럼 확정 전인 연간 차트는 예측하지 않습니다.
+
+## GitHub Pages 배포
+
+1. 새 공개 저장소 `rescene-record`를 만들고 이 폴더의 파일을 올립니다. 기존 투표 저장소에 올리지 않습니다.
+2. Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 선택합니다.
+3. Actions의 **Collect charts and publish Pages**를 실행합니다.
+4. 주소: `https://사용자명.github.io/rescene-record/`
+
+매시 17분에 최신 차트 표를 수집하고 데이터를 저장한 뒤 배포합니다. 새로 확인된 곡은 과거 기록도 자동으로 확인합니다. 매주 일요일 04:43 KST에는 전곡 과거 기록을 다시 확인합니다. GitHub 스케줄 실행에는 지연이 있을 수 있습니다. 실패한 개별 출처는 마지막 성공 기록을 유지합니다. 과거 전체 기록 재확인은 Actions 수동 실행에서 `backfill`을 체크합니다. 초기 과거 기록은 함께 제공되는 `data/`에 들어 있습니다. 공개 사이트에 부담을 줄이도록 요청을 제한합니다.
+
+## 로컬 실행
+
+```sh
+python -m pip install -r requirements.txt
+python scripts/collect.py          # 최신 기록 추가
+python scripts/collect.py --backfill # 공개 곡별 과거 기록 재확인
+python -m unittest discover -s tests
+python scripts/build.py
+npm ci && npm test
+python -m http.server 8000
+```
+
+`index.html`은 데이터를 포함하므로 파일을 직접 열어도 작동합니다. 데이터 오류·출처 변경 시 수집기는 잘못된 응답을 덮어쓰지 않고 오류를 기록합니다.
+
+글꼴은 Google Fonts의 Noto Sans KR 일부 문자 글꼴을 포함합니다. 라이선스는 `FONT-LICENSE.txt`를 확인하세요.

@@ -1,0 +1,4 @@
+source-cache/
+__pycache__/
+*.log
+node_modules/
