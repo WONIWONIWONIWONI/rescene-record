@@ -11,7 +11,7 @@ def build():
  extra+="<style>@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,"+font+") format('woff2')}</style>"
  boot="""(async function(){try{const element=document.getElementById('rr-data');const bytes=Uint8Array.from(atob(element.textContent),c=>c.charCodeAt(0));element.textContent=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();"""
  fail="""}catch(error){document.getElementById('rr-detail').textContent='기록을 열 수 없습니다. 최신 Chrome, Edge, Safari 또는 Firefox에서 다시 열어 주세요.';console.error(error);}})();"""
- html=(ROOT/'template.html').read_text()+extra+'<script id="rr-data" type="application/octet-stream">'+encoded+'</script><script>'+boot+(ROOT/'app.js').read_text()+(ROOT/'mts.js').read_text()+fail+'</script></div></body></html>'
+ html=(ROOT/'template.html').read_text()+extra+'<script id="rr-data" type="application/octet-stream">'+encoded+'</script><script>'+boot+(ROOT/'app.js').read_text()+(ROOT/'mts.js').read_text()+(ROOT/'selects.js').read_text()+fail+'</script></div></body></html>'
  (ROOT/'index.html').write_text(html)
  print('Built standalone archive',len(html.encode()),'bytes')
 if __name__=='__main__':build()
