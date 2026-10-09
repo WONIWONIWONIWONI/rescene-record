@@ -3,7 +3,7 @@
 const root=document.getElementById('rescene-record'),$=id=>root.querySelector('#'+id),db=JSON.parse(document.getElementById('rr-data').textContent);
 const D=86400000,parse=s=>Date.parse(s+(s.length===10?'T00:00:00':'')+'+09:00'),debut=parse(db.manifest.debut);
 const songs=db.manifest.songs,types=[['top100','TOP100','hour'],['hot100-d30','HOT100 · 30일','hour'],['hot100-d100','HOT100 · 100일','hour'],['daily','일간','day'],['weekly','주간','week'],['monthly','월간','month'],['yearly','연간','year']];
-const colors=['#0072b2','#e33243','#009e73','#8751c7','#ed8b00','#00a5b5','#d650a2','#889500','#99613d','#687787','#c2a000','#534ac4'];
+const colors=['#0072b2','#e33243','#009e73','#8751c7','#ed8b00','#00a5b5','#d650a2','#889500','#99613d','#687787','#c2a000','#534ac4','#41a8dc','#c06c84','#a5b330'];
 const charted=songs.filter(s=>Object.values(db.charts).some(c=>Object.values(c.songs[s.id]||{}).some(p=>Number.isFinite(p.rank)&&p.rank>0)));
 const songColor=s=>colors[charted.findIndex(x=>x.id===s.id)]||'hsl('+((charted.findIndex(x=>x.id===s.id)*137.5)%360)+' 65% 42%)';
 const color=s=>s.color;
