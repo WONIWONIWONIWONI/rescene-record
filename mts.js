@@ -8,7 +8,7 @@ const platformName=()=>platforms.find(p=>p.id===platform).name;
 function sourceTypes(){types=platforms.find(p=>p.id===platform).charts.map(k=>[k,db.charts[k].label,({hour:'시간봉',day:'일봉',week:'주봉',month:'월봉',year:'연봉'}[db.charts[k].unit])||fallback.find(t=>t[0]===k)?.[2]]);}
 sourceTypes();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const name=s=>songs.filter(x=>x.name===s.name&&Object.hasOwn(db.charts[type].songs,x.id)).length>1?s.name+' · '+s.album:s.name;
+const name=s=>songs.filter(x=>x.name===s.name&&Object.values(db.charts[type].songs[x.id]||{}).some(p=>Number.isFinite(p.rank)&&p.rank>0)).length>1?s.name+' · '+s.album:s.name;
 let type='daily',songId=null,bars=[],start=0,span=100,geometry={},pointers=new Map(),gesture=null;
 const unit=()=>types.find(x=>x[0]===type)[2];
 function clamp(a,n){const length=Math.max(1,bars.length);n=Math.max(Math.min(8,length),Math.min(length,n));start=Math.max(0,Math.min(length-n,a));span=n;}

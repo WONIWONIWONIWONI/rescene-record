@@ -15,7 +15,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=t=>new Date(t+9*3600000).toISOString().slice(0,10).replaceAll('-','.');
 const config=()=>types.find(x=>x[0]===state.type),dataset=()=>db.charts[state.type];
 const recordLink=(s,type)=>db.charts[type].source+'/trend/ranking/'+(db.charts[type].sourceSongIds?.[s.id]||s.id);
-const name=s=>songs.filter(x=>x.name===s.name&&Object.hasOwn(dataset().songs,x.id)).length>1?s.name+' · '+s.album:s.name;
+const name=s=>songs.filter(x=>x.name===s.name&&Object.values(dataset().songs[x.id]||{}).some(p=>Number.isFinite(p.rank)&&p.rank>0)).length>1?s.name+' · '+s.album:s.name;
 let state={type:'daily',tableType:'daily',period:'all',visible:new Set(songs.map(s=>s.id)),view:null},series=[],bounds=[],end;
 const eligible=()=>songs.filter(s=>records(s).some(p=>p.t>=debut&&Number.isFinite(p.rank)&&p.rank>0));
 const mobile=()=>$('rr-chart').getBoundingClientRect().width<500;
