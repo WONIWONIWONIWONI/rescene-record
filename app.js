@@ -3,7 +3,7 @@
 const root=document.getElementById('rescene-record'),$=id=>root.querySelector('#'+id),db=JSON.parse(document.getElementById('rr-data').textContent);
 const D=86400000,parse=s=>Date.parse(s+(s.length===10?'T00:00:00':'')+'+09:00'),debut=parse(db.manifest.debut);
 const songs=db.manifest.songs,types=[['top100','TOP100','hour'],['hot100-d30','HOT100 · 30일','hour'],['hot100-d100','HOT100 · 100일','hour'],['daily','일간','day'],['weekly','주간','week'],['monthly','월간','month'],['yearly','연간','year']];
-const colors=['#d6336c','#1971c2','#087f5b','#e67700','#6741d9','#c2255c','#0b7285','#5c940d','#a61e4d','#364fc7','#9c36b5','#d9480f'];
+const colors=['#0072b2','#e33243','#009e73','#8751c7','#ed8b00','#00a5b5','#d650a2','#889500','#99613d','#687787','#c2a000','#534ac4'];
 const charted=songs.filter(s=>Object.values(db.charts).some(c=>Object.values(c.songs[s.id]||{}).some(p=>Number.isFinite(p.rank)&&p.rank>0)));
 const songColor=s=>colors[charted.findIndex(x=>x.id===s.id)]||'hsl('+((charted.findIndex(x=>x.id===s.id)*137.5)%360)+' 65% 42%)';
 const color=s=>s.color;
@@ -36,7 +36,7 @@ function render(){const focused=document.activeElement,focusSong=focused?.datase
 root.querySelectorAll('[data-chart]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.chart===state.type)));
 $('rr-period').innerHTML=[['all','데뷔일부터'],['365','최근 1년'],['90','90일'],['30','30일']].map(p=>'<button type="button" data-period="'+p[0]+'" aria-pressed="'+(state.period===p[0])+'">'+p[1]+'</button>').join('');
 $('rr-chart-title').textContent=c[1]+' · 리센느 곡 함께 보기';$('rr-chart-sub').textContent=fmt(bounds[0])+' – '+fmt(end)+' · 최신 집계 '+((data?.latestSourceTime||data?.latest)?.replace('T',' ').slice(0,c[2]==='hour'?16:c[2]==='year'?4:c[2]==='month'?7:10)||'없음')+' KST';
-$('rr-full-label').hidden=state.type!=='daily';$('rr-legend').innerHTML=series.map(({song:s,color})=>'<button type="button" data-song="'+s.id+'" aria-pressed="'+state.visible.has(s.id)+'" style="--song-color:'+color+'"><i style="background:'+color+'"></i><span class="rr-selected" aria-hidden="true">'+(state.visible.has(s.id)?'✓':'＋')+'</span>'+esc(name(s))+'</button>').join('');
+$('rr-full-label').hidden=state.type!=='daily';$('rr-legend').innerHTML=series.map(({song:s,color})=>'<button type="button" data-song="'+s.id+'" aria-pressed="'+state.visible.has(s.id)+'" style="--song-color:'+color+'"><i style="background:'+color+'">'+(charted.findIndex(x=>x.id===s.id)+1)+'</i><span class="rr-selected" aria-hidden="true">'+(state.visible.has(s.id)?'✓':'＋')+'</span>'+esc(name(s))+'</button>').join('');
 $('rr-count').textContent=series.filter(s=>state.visible.has(s.song.id)).length+' / '+series.length+'곡 표시';
 const fetched=Object.keys(data?.historyFetched||{}).length,failed=new Set((db.manifest.errors||[]).filter(e=>e.startsWith(state.type+'/')).map(e=>e.split('/')[1].split(':')[0]));
 $('rr-table-note').textContent='최신 순위는 차트의 마지막 집계 기준 · 최고 순위는 선택 기간의 확인된 기록 기준';
