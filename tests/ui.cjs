@@ -26,8 +26,8 @@ for(const type of ['top100','hot100-d30','hot100-d100']){
  assert.ok(Number($('rr-chart').dataset.rankMin)>=1);assert.ok(Number($('rr-chart').dataset.rankMax)<=100);
  $('rr-hide-all').onclick();assert.equal($('rr-chart').dataset.rankMin,'1');assert.equal($('rr-chart').dataset.rankMax,'100');$('rr-show-all').onclick();
 }
-function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),line=$(id);if(line){assert.ok(lo<=100&&hi>=100);assert.equal(line.getAttribute('stroke-width'),'1.5');const y=Number(line.getAttribute('y1'));assert.ok(Number.isFinite(y)&&y>=0);}}
-for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assertThreshold($('rr-chart'),'rr-top100-line');}
+function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),label=$(id);assert.equal(Boolean(label),lo<=100&&hi>=100);assert.equal(svg.querySelectorAll('text').length>0,true);assert.equal(svg.querySelector('[id$="top100-line"]'),null);if(label){assert.equal(label.textContent,'100');assert.equal(label.getAttribute('text-anchor'),'end');assert.equal(label.getAttribute('x'),'40');assert.match(label.getAttribute('fill'),/^#(?:e33243|ff5470)$/);assert.ok(Number.isFinite(Number(label.getAttribute('y'))));assert.equal(Array.from(svg.querySelectorAll('text')).filter(t=>t.textContent==='100').length,1);}}
+for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assertThreshold($('rr-chart'),'rr-top100-label');}
 const axis=document.getElementById('rescene-record').rankAxis;
 for(const expanded of [false,true]){
  for(const ranks of [[2,4,6],[53,55,57],[498,500,502],[100],[1],[1000]]){const a=axis(ranks,1000,expanded);assert.ok(a.lo<=Math.min(...ranks));assert.ok(a.hi>=Math.max(...ranks));assert.ok(a.hi>a.lo);assert.ok(a.ticks.length>=2&&a.ticks.every(v=>v>=a.lo&&v<=a.hi));if(ranks.length>1)assert.ok(a.hi-a.lo<30);}
@@ -62,7 +62,7 @@ for(const platform of db.manifest.platforms||[]){
   assert.match($('rr-chart-note').textContent,/가이섬/);assert.ok($('rr-chart-note').textContent.includes(platform.name));
   assert.ok(!/NaN|Infinity|undefined/.test($('rr-chart').innerHTML+candle.innerHTML));
   for(const bar of candle.querySelectorAll('[data-bar-time]'))assert.equal(Number(bar.dataset.close),c.songs[$('mts-song').value][bar.dataset.barTime].rank);
-  assertThreshold($('rr-chart'),'rr-top100-line');assertThreshold(candle,'mts-top100-line');const lo=Number(candle.dataset.rankMin),hi=Number(candle.dataset.rankMax);for(const bar of candle.querySelectorAll('[data-bar-time]')){for(const value of [bar.dataset.close,bar.dataset.open].filter(Boolean)){assert.ok(Number(value)>=lo&&Number(value)<=hi);}}
+  assertThreshold($('rr-chart'),'rr-top100-label');assertThreshold(candle,'mts-top100-label');const lo=Number(candle.dataset.rankMin),hi=Number(candle.dataset.rankMax);for(const bar of candle.querySelectorAll('[data-bar-time]')){for(const value of [bar.dataset.close,bar.dataset.open].filter(Boolean)){assert.ok(Number(value)>=lo&&Number(value)<=hi);}}
  }
 }
-console.log('All platforms: chart options, source labels, entry filtering, exact candles, adaptive axes and thin in-range 100-rank lines pass');
+console.log('All platforms: chart options, source labels, entry filtering, exact candles, adaptive axes and red left-axis 100 labels without threshold lines pass');
