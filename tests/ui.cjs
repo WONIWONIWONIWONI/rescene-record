@@ -26,7 +26,7 @@ for(const type of ['top100','hot100-d30','hot100-d100']){
  assert.ok(Number($('rr-chart').dataset.rankMin)>=1);assert.ok(Number($('rr-chart').dataset.rankMax)<=100);
  $('rr-hide-all').onclick();assert.equal($('rr-chart').dataset.rankMin,'1');assert.equal($('rr-chart').dataset.rankMax,'100');$('rr-show-all').onclick();
 }
-function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),label=$(id);assert.equal(Boolean(label),lo<=100&&hi>=100);assert.equal(svg.querySelectorAll('text').length>0,true);assert.equal(svg.querySelector('[id$="top100-line"]'),null);if(label){assert.equal(label.textContent,'100');assert.equal(label.getAttribute('text-anchor'),'end');assert.equal(label.getAttribute('x'),'40');assert.match(label.getAttribute('fill'),/^#(?:e33243|ff5470)$/);assert.ok(Number.isFinite(Number(label.getAttribute('y'))));assert.equal(Array.from(svg.querySelectorAll('text')).filter(t=>t.textContent==='100').length,1);}}
+function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),label=$(id);assert.equal(Boolean(label),lo<=100&&hi>=100);assert.equal(svg.querySelectorAll('text').length>0,true);const threshold=svg.querySelector('[id$="top100-line"]');assert.equal(Boolean(threshold),Boolean(label));if(label){assert.equal(threshold.getAttribute('stroke-width'),'1.5');assert.equal(threshold.getAttribute('stroke'),label.getAttribute('fill'));assert.equal(Number(threshold.getAttribute('y1')),Number(label.getAttribute('y'))-4);assert.equal(label.textContent,'100');assert.equal(label.getAttribute('text-anchor'),'end');assert.equal(label.getAttribute('x'),'40');assert.match(label.getAttribute('fill'),/^#(?:e33243|ff5470)$/);assert.ok(Number.isFinite(Number(label.getAttribute('y'))));assert.equal(Array.from(svg.querySelectorAll('text')).filter(t=>t.textContent==='100').length,1);}}
 for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assertThreshold($('rr-chart'),'rr-top100-label');}
 const axis=document.getElementById('rescene-record').rankAxis;
 for(const expanded of [false,true]){
@@ -65,4 +65,4 @@ for(const platform of db.manifest.platforms||[]){
   assertThreshold($('rr-chart'),'rr-top100-label');assertThreshold(candle,'mts-top100-label');const lo=Number(candle.dataset.rankMin),hi=Number(candle.dataset.rankMax);for(const bar of candle.querySelectorAll('[data-bar-time]')){for(const value of [bar.dataset.close,bar.dataset.open].filter(Boolean)){assert.ok(Number(value)>=lo&&Number(value)<=hi);}}
  }
 }
-console.log('All platforms: chart options, source labels, entry filtering, exact candles, adaptive axes and red left-axis 100 labels without threshold lines pass');
+console.log('All platforms: chart options, source labels, entry filtering, exact candles, adaptive axes and red left-axis 100 labels with matching threshold lines pass');
