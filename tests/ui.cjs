@@ -20,9 +20,21 @@ const chartTitle=$('rr-chart-title').textContent;$('rr-table-chart').value='top1
 for(const option of $('rr-table-chart').children){$('rr-table-chart').value=option.getAttribute('value');$('rr-table-chart').onchange();const best=Array.from($('rr-history').querySelectorAll('[data-record-song]'),tr=>Number(tr.children[2].textContent.replace('위',''))||Infinity);assert.deepEqual(best,[...best].sort((a,b)=>a-b));}
 console.log('UI: thin lines, timestamp tooltip, independent table chart selection and peak ordering pass');
 
-for(const type of ['top100','hot100-d30','hot100-d100']){ $('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});const ticks=()=>Array.from($('rr-chart').querySelectorAll('text[x="40"]'),el=>Number(el.textContent));assert.deepEqual(ticks(),[1,20,40,60,80,100]);$('rr-hide-all').onclick();assert.deepEqual(ticks(),[1,20,40,60,80,100]);$('rr-show-all').onclick();assert.deepEqual(ticks(),[1,20,40,60,80,100]);}console.log('UI: TOP100 and both HOT100 axes stay at 1–100 including empty selection');
-
-for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assert.ok($('rr-top100-line'));assert.equal($('rr-top100-line').getAttribute('stroke-width'),'3');assert.ok(Number.isFinite(Number($('rr-top100-line').getAttribute('y1'))));}
+$('rr-full').checked=false;
+for(const type of ['top100','hot100-d30','hot100-d100']){
+ $('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});
+ assert.ok(Number($('rr-chart').dataset.rankMin)>=1);assert.ok(Number($('rr-chart').dataset.rankMax)<=100);
+ $('rr-hide-all').onclick();assert.equal($('rr-chart').dataset.rankMin,'1');assert.equal($('rr-chart').dataset.rankMax,'100');$('rr-show-all').onclick();
+}
+function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),line=$(id);if(line){assert.ok(lo<=100&&hi>=100);assert.equal(line.getAttribute('stroke-width'),'1');const y=Number(line.getAttribute('y1'));assert.ok(Number.isFinite(y)&&y>=0);}}
+for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assertThreshold($('rr-chart'),'rr-top100-line');}
+const axis=document.getElementById('rescene-record').rankAxis;
+for(const expanded of [false,true]){
+ for(const ranks of [[2,4,6],[53,55,57],[498,500,502],[100],[1],[1000]]){const a=axis(ranks,1000,expanded);assert.ok(a.lo<=Math.min(...ranks));assert.ok(a.hi>=Math.max(...ranks));assert.ok(a.hi>a.lo);assert.ok(a.ticks.length>=2&&a.ticks.every(v=>v>=a.lo&&v<=a.hi));if(ranks.length>1)assert.ok(a.hi-a.lo<30);}
+ const empty=axis([],100,expanded);assert.equal(empty.lo,1);assert.equal(empty.hi,100);
+ const full=axis([500],1000,expanded,true);assert.equal(full.lo,1);assert.equal(full.hi,1000);
+}
+console.log('Adaptive axes: narrow high/low ranks, single values, limits, empty fallback and optional full range pass');
 
 vm.runInContext(fs.readFileSync(path.join(root,'mts.js'),'utf8'),vm.createContext({document,window,console,Date,Set,Map,Math,Number,JSON,ResizeObserver:class{observe(){}}}));
 const candle=$('mts-chart');assert.equal($('rr-legend').hidden,false);assert.equal($('rr-mode'),null);
@@ -33,7 +45,7 @@ const event=(id,x,y=100)=>({pointerId:id,clientX:x,clientY:y,button:0,preventDef
 
 $('mts-type').value='top100';$('mts-type').onchange();$('mts-song').value='601719493';$('mts-song').onchange();let changes=0;for(const bar of candle.querySelectorAll('[data-bar-time]')){const time=bar.dataset.barTime,previousTime=new Date(Date.parse(time+'+09:00')-3600000+9*3600000).toISOString().slice(0,19),raw=db.charts.top100.songs['601719493'],open=raw[previousTime]?.rank??null;assert.equal(bar.dataset.open,open==null?'':String(open));assert.equal(Number(bar.dataset.close),raw[time].rank);if(open!=null&&open!==raw[time].rank){assert.ok(Number(bar.getAttribute('height'))>2.4);assert.equal(bar.getAttribute('fill'),raw[time].rank<open?'#ff5470':'#49a3ff');changes++;}}assert.ok(changes>0);candle.onpointermove(event(0,150));assert.match($('mts-tooltip').textContent,/시가.*종가/);console.log('MTS: previous-hour open, current close, candle body direction and tooltip verified');
 const line=$('rr-chart');$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="daily"]')});const lineSpan=Number(line.dataset.span);line.onpointerdown(event(21,80,90));line.onpointerdown(event(22,150,110));line.onpointermove(event(22,230,150));assert.ok(Number(line.dataset.span)<lineSpan);line.onpointerup(event(22,230,150));line.onpointerup(event(21,80,90));line.onpointermove({clientX:130,clientY:100});assert.ok($('rr-end-labels').querySelectorAll('text').length>0);assert.ok($('rr-markers').querySelector('[data-rank-guide]'));console.log('Line chart: pinch changes range, right song labels and left rank guide pass');
-$('rr-expand').checked=true;$('rr-expand').onchange();const rankY=v=>Number(Array.from(line.querySelectorAll('text[x="40"]')).find(t=>t.textContent===String(v)).getAttribute('y'));assert.ok(rankY(6)-rankY(4)>12);assert.equal(line.dataset.rankScale,'expanded');$('rr-expand').checked=false;$('rr-expand').onchange();assert.equal(line.dataset.rankScale,'linear');console.log('Rank scale: top-rank spacing expands and linear scale restores');
+$('rr-expand').checked=true;$('rr-expand').onchange();assert.equal(line.dataset.rankScale,'expanded');$('rr-expand').checked=false;$('rr-expand').onchange();assert.equal(line.dataset.rankScale,'linear');console.log('Rank scale: adaptive expanded and linear modes pass');
 
 for(const platform of db.manifest.platforms||[]){
  $('rr-platform').value=platform.id;$('rr-platform').onchange();
@@ -50,7 +62,7 @@ for(const platform of db.manifest.platforms||[]){
   assert.match($('rr-chart-note').textContent,/가이섬/);assert.ok($('rr-chart-note').textContent.includes(platform.name));
   assert.ok(!/NaN|Infinity|undefined/.test($('rr-chart').innerHTML+candle.innerHTML));
   for(const bar of candle.querySelectorAll('[data-bar-time]'))assert.equal(Number(bar.dataset.close),c.songs[$('mts-song').value][bar.dataset.barTime].rank);
-  if(c.unit!=='hour'){assert.ok($('rr-top100-line'));assert.ok($('mts-top100-line'));}
+  assertThreshold($('rr-chart'),'rr-top100-line');assertThreshold(candle,'mts-top100-line');const lo=Number(candle.dataset.rankMin),hi=Number(candle.dataset.rankMax);for(const bar of candle.querySelectorAll('[data-bar-time]')){for(const value of [bar.dataset.close,bar.dataset.open].filter(Boolean)){assert.ok(Number(value)>=lo&&Number(value)<=hi);}}
  }
 }
-console.log('All platforms: chart options, source labels, entry filtering, exact candles and 100-rank lines pass');
+console.log('All platforms: chart options, source labels, entry filtering, exact candles, adaptive axes and thin in-range 100-rank lines pass');

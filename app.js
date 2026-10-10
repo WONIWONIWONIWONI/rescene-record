@@ -1,6 +1,15 @@
 (function(){
 'use strict';
 const root=document.getElementById('rescene-record'),$=id=>root.querySelector('#'+id),db=JSON.parse(document.getElementById('rr-data').textContent);
+// Both charts use the visible ranks, with padding in the chosen scale.
+root.rankAxis=function(values,limit,expanded,full=false){
+const valid=values.filter(v=>Number.isFinite(v)&&v>0),scale=v=>expanded?Math.log(v):v,inverse=v=>expanded?Math.exp(v):v;
+let lo=1,hi=Math.max(2,limit||100);
+if(valid.length&&!full){const min=valid.reduce((a,v)=>Math.min(a,v),Infinity),max=valid.reduce((a,v)=>Math.max(a,v),-Infinity),padding=Math.max((scale(max)-scale(min))*.08,expanded?Math.log(1+2/min):2);lo=Math.max(1,Math.floor(inverse(scale(min)-padding)));hi=Math.min(Math.max(limit||100,max),Math.ceil(inverse(scale(max)+padding)));}
+hi=Math.max(lo+1,hi);
+const ticks=[...new Set(Array.from({length:6},(_,i)=>Math.round(inverse(scale(lo)+(scale(hi)-scale(lo))*i/5))))].filter(v=>v>=lo&&v<=hi);
+return {lo,hi,scale,ticks};
+};
 const D=86400000,parse=s=>Date.parse(s+(s.length===10?'T00:00:00':'')+'+09:00'),debut=parse(db.manifest.debut);
 const songs=db.manifest.songs,platforms=db.manifest.platforms||[{id:'melon',name:'멜론',charts:db.manifest.charts}],fallback=[['top100','TOP100','hour'],['hot100-d30','HOT100 · 30일','hour'],['hot100-d100','HOT100 · 100일','hour'],['daily','일간','day'],['weekly','주간','week'],['monthly','월간','month'],['yearly','연간','year']];
 let platform='melon',types=fallback;
@@ -52,13 +61,17 @@ $('rr-table-note').textContent='최신 순위는 차트의 마지막 집계 기�
 $('rr-chart-note').innerHTML='출처: <a href="'+esc(data?.source||'https://xn--o39an51b2re.com')+'" target="_blank" rel="noopener">가이섬의 '+esc(platformName())+' '+esc(c[1])+' 기록</a> · 과거 기록 확인 '+fetched+'/'+(data.sourceSongIds?Object.keys(data.sourceSongIds).length:songs.filter(s=>s.id.match(/^\d+$/)).length)+'트랙. '+(state.type.startsWith('hot')?'HOT100은 발매일을 기준으로 대상 기간이 제한됩니다. ':'')+(state.type==='yearly'?'확정된 연간 차트만 표시합니다. ':'')+'주간·월간·연간 점은 집계 기간의 마지막 날짜에 표시합니다. 순위가 제공되지 않거나 수집되지 않은 구간은 연결하지 않습니다. 최신 표는 '+Number(data.snapshotLimit||data.limit).toLocaleString('ko-KR')+'위까지입니다.';
 renderTable();
 $('rr-detail').textContent='그래프를 가리키거나 터치하면 해당 시각에 확인된 곡별 순위를 비교할 수 있어요.';draw();if(focusSong)$('rr-legend').querySelector('[data-song="'+focusSong+'"]')?.focus?.({preventScroll:true});if(focusPeriod)$('rr-period').querySelector('[data-period="'+focusPeriod+'"]')?.focus?.({preventScroll:true});$('rr-legend').scrollTop=scroll;}
-function draw(){$('rr-tooltip').hidden=true;const fixed100=state.type==='top100'||state.type.startsWith('hot100-')||(platform!=='melon'&&dataset().limit===100);const svg=$('rr-chart'),w=Math.max(220,svg.getBoundingClientRect().width||800),h=w<500?300:335,l=48,r=w<500?88:116,t=24,b=46;svg.setAttribute('viewBox','0 0 '+w+' '+h);const view=state.view;viewLabel();const active=series.filter(s=>state.visible.has(s.song.id)).map(s=>{const a=s.points;let first=a.findIndex(p=>p.t>=view[0]);if(first<0)first=a.length;let last=a.findIndex(p=>p.t>view[1]);if(last<0)last=a.length;return {...s,points:a.slice(Math.max(0,first-1),Math.min(a.length,last+1))};}),vals=active.flatMap(s=>s.points.filter(p=>p.rank!=null).map(p=>p.rank));
-let lo=Math.max(1,Math.floor((vals.reduce((a,v)=>Math.min(a,v),Infinity)-5)/10)*10),hi=Math.ceil((vals.reduce((a,v)=>Math.max(a,v),-Infinity)+5)/10)*10;if(dataset().limit>100){hi=Math.min(dataset().limit,hi);lo=Math.min(dataset().limit-1,lo);if($('rr-full').checked){lo=1;hi=dataset().limit;}}if(!vals.length){lo=1;hi=dataset().limit>100?dataset().limit:120;}if(fixed100){lo=1;hi=100;}else{lo=Math.min(lo,90);hi=Math.max(hi,110);}hi=Math.max(lo+1,hi);
-const expanded=$('rr-expand').checked;if(expanded)lo=1;const scale=v=>expanded?Math.log(Math.max(1,v)):v;svg.dataset.rankScale=expanded?'expanded':'linear';
+function draw(){$('rr-tooltip').hidden=true;const fixed100=state.type==='top100'||state.type.startsWith('hot100-')||(platform!=='melon'&&dataset().limit===100);const svg=$('rr-chart'),w=Math.max(220,svg.getBoundingClientRect().width||800),h=w<500?300:335,l=48,r=w<500?88:116,t=24,b=46;svg.setAttribute('viewBox','0 0 '+w+' '+h);const view=state.view;viewLabel();const active=series.filter(s=>state.visible.has(s.song.id)).map(s=>{const a=s.points;let first=a.findIndex(p=>p.t>=view[0]);if(first<0)first=a.length;let last=a.findIndex(p=>p.t>view[1]);if(last<0)last=a.length;return {...s,points:a.slice(Math.max(0,first-1),Math.min(a.length,last+1))};}),vals=active.flatMap(s=>{
+const ranks=s.points.filter(p=>p.t>=view[0]&&p.t<=view[1]&&p.rank!=null).map(p=>p.rank);
+// Include only the visible portion of a line crossing a viewport edge.
+for(let i=1;i<s.points.length;i++){const a=s.points[i-1],b=s.points[i];if(a.rank==null||b.rank==null||gaps(a,b))continue;for(const edge of view)if(a.t<edge&&b.t>edge){const fraction=(edge-a.t)/(b.t-a.t);ranks.push($('rr-expand').checked?Math.exp(Math.log(a.rank)+(Math.log(b.rank)-Math.log(a.rank))*fraction):a.rank+(b.rank-a.rank)*fraction);}}
+return ranks;
+});
+const expanded=$('rr-expand').checked,{lo,hi,scale,ticks:rankTicks}=root.rankAxis(vals,dataset().limit,expanded,$('rr-full').checked);svg.dataset.rankScale=expanded?'expanded':'linear';svg.dataset.rankMin=String(lo);svg.dataset.rankMax=String(hi);
 const x=v=>l+(v-view[0])/(view[1]-view[0])*(w-l-r),y=v=>t+(scale(v)-scale(lo))/(scale(hi)-scale(lo))*(h-t-b);lineGeometry={l,r,w};svg.dataset.start=String(view[0]);svg.dataset.span=String(view[1]-view[0]);
 let markup='<title>'+esc(config()[1])+' · 리센느 전곡 순위 추이</title><desc>순위가 낮을수록 위에 표시합니다. 제공되지 않은 시점은 연결하지 않습니다.</desc><text x="'+l+'" y="13" fill="var(--rr-muted)" font-size="11">순위 (위)</text>';
-for(const v of (expanded?(fixed100?[1,2,4,6,10,20,40,60,80,100]:[1,2,4,6,10,20,50,100,250,500,1000].filter(v=>v<=hi)):(fixed100?[1,20,40,60,80,100]:Array.from({length:5},(_,i)=>Math.round(lo+(hi-lo)*i/4))))){const yy=y(v);markup+='<line x1="'+l+'" x2="'+(w-r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--rr-line)"/><text x="'+(l-8)+'" y="'+(yy+4)+'" text-anchor="end" font-size="12" fill="var(--rr-muted)">'+v+'</text>';}
-if(!fixed100||config()[2]!=='hour')markup+='<line id="rr-top100-line" x1="'+l+'" x2="'+(w-r)+'" y1="'+y(100)+'" y2="'+y(100)+'" stroke="var(--rr-accent)" stroke-width="3" vector-effect="non-scaling-stroke"/><text x="'+(w-r-4)+'" y="'+(y(100)-6)+'" text-anchor="end" fill="var(--rr-accent)" font-size="12" font-weight="700">100위 진입선</text>';
+for(const v of rankTicks){const yy=y(v);markup+='<line x1="'+l+'" x2="'+(w-r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--rr-line)"/><text x="'+(l-8)+'" y="'+(yy+4)+'" text-anchor="end" font-size="12" fill="var(--rr-muted)">'+v+'</text>';}
+if((!fixed100||config()[2]!=='hour')&&lo<=100&&hi>=100)markup+='<line id="rr-top100-line" x1="'+l+'" x2="'+(w-r)+'" y1="'+y(100)+'" y2="'+y(100)+'" stroke="var(--rr-accent)" stroke-width="1" vector-effect="non-scaling-stroke"/><text x="'+(w-r-4)+'" y="'+(y(100)-6)+'" text-anchor="end" fill="var(--rr-accent)" font-size="12" font-weight="700">100위 진입선</text>';
 if(!vals.length)markup+='<text x="'+w/2+'" y="150" text-anchor="middle" font-size="14" fill="var(--rr-muted)">'+(active.length?'이 기간에 확인된 차트 진입 기록이 없어요':'표시할 곡을 선택해 주세요')+'</text>';
 markup+='<defs><clipPath id="rr-clip"><rect x="'+l+'" y="'+t+'" width="'+(w-l-r)+'" height="'+(h-t-b)+'"/></clipPath></defs><g clip-path="url(#rr-clip)">';
 
