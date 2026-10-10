@@ -26,7 +26,7 @@ for(const type of ['top100','hot100-d30','hot100-d100']){
  assert.ok(Number($('rr-chart').dataset.rankMin)>=1);assert.ok(Number($('rr-chart').dataset.rankMax)<=100);
  $('rr-hide-all').onclick();assert.equal($('rr-chart').dataset.rankMin,'1');assert.equal($('rr-chart').dataset.rankMax,'100');$('rr-show-all').onclick();
 }
-function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),line=$(id);if(line){assert.ok(lo<=100&&hi>=100);assert.equal(line.getAttribute('stroke-width'),'1');const y=Number(line.getAttribute('y1'));assert.ok(Number.isFinite(y)&&y>=0);}}
+function assertThreshold(svg,id){const lo=Number(svg.dataset.rankMin),hi=Number(svg.dataset.rankMax),line=$(id);if(line){assert.ok(lo<=100&&hi>=100);assert.equal(line.getAttribute('stroke-width'),'1.5');const y=Number(line.getAttribute('y1'));assert.ok(Number.isFinite(y)&&y>=0);}}
 for(const type of ['daily','weekly','monthly','yearly']){$('rr-tabs').onclick({target:$('rr-tabs').querySelector('[data-chart="'+type+'"]')});assertThreshold($('rr-chart'),'rr-top100-line');}
 const axis=document.getElementById('rescene-record').rankAxis;
 for(const expanded of [false,true]){
