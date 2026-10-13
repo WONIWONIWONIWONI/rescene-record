@@ -76,3 +76,6 @@ run("answers={...defaults,pob:'want',pobOffer:'cu-qr',budget:44500,cap:5,collect
 run("calcShop='auto';calcCounts={standard:0,limited:0,qr:0,qrset:1,wappen:0};view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(!mainMarkup.includes('일반 기준가'));
 run("answers={...defaults};step=1;quiz();");assert.ok(!mainMarkup.includes('공구 제외'));assert.ok(mainMarkup.includes('미공포 없는 앨범은 공구가로 예산'));
 console.log('PASS mandatory bare group prices in recommendation, old links, collection roadmap, calculator and budget controls.');
+
+run("answers={...defaults,budget:0,pob:'none'};results();");assert.ok(mainMarkup.includes('가장 저렴한 단품은 7,300원'));
+console.log('PASS empty-budget guidance also uses the bare group price.');
