@@ -31,4 +31,36 @@ test('chart maximum agrees with independently enumerated five-product baskets',(
 });
 test('minimum price bundling chooses cheaper singles or discounted sets',()=>{const p={...prices,qr:8000,qrset:50000};assert.equal(E.qrSplit(10,p).qrset,0);assert.equal(E.qrSplit(10,p,true).qrset,2);assert.equal(E.qrSplit(12,{...prices,qrset:40000}).cost,97800);});
 test('90 percent quantities actually reach the specified pool threshold',()=>{for(const [n,k] of [[4,2],[5,1],[10,2],[15,3]]){const count=E.n90(n,k);assert.ok(E.completion(n,k,count)>=.9);assert.ok(E.completion(n,k,count-1)<.9);}});
+test('unlimited budget removes the money bound but retains the unit bound',()=>{
+  const m=E.recommend({...base,budget:0,budgetUnlimited:true,cap:100,goal:'chart'},prices);
+  assert.equal(m.chart,100);assert.equal(m.units,100);assert.equal(m.total,890000);
+  assert.ok(E.recommend({...base,budget:0,budgetUnlimited:false},prices).empty);
+});
+test('CU Wappen pair uses the corrected 22,200 price',()=>{
+  const a={...base,pob:'want',pobOffer:'cu-wappen',cap:2,budget:22200};
+  const m=E.recommend(a,prices);assert.equal(m.total,22200);assert.equal(m.units,2);assert.equal(m.cards,2);assert.equal(m.chart,0);
+  assert.ok(E.recommend({...a,budget:22000},prices).empty);
+});
+test('all seven special bundles total 564,200 and count 32 actual units',()=>{
+  const m=E.recommend({...base,pob:'all',budget:564200,cap:32},prices);
+  assert.equal(m.offers.length,7);assert.equal(m.total,564200);assert.equal(m.units,32);assert.equal(m.cards,87);assert.equal(m.chart,25);assert.equal(m.extras.units,0);
+  assert.ok(E.recommend({...base,pob:'all',budgetUnlimited:true,cap:25},prices).empty);
+});
+test('special-bundle albums contribute to full album-photocard goals',()=>{
+  const m=E.recommend({...base,pob:'all',budgetUnlimited:true,cap:50,goal:'cards',collect:'complete',scope:'all'},prices);
+  assert.equal(m.total,608700);assert.equal(m.units,37);assert.equal(m.products.qrset,2);assert.equal(m.products.standard,15);assert.equal(m.products.limited,5);assert.equal(m.products.wappen,7);
+  assert.equal(m.extras.products.standard,0);assert.equal(m.extras.products.limited,0);assert.equal(m.extras.products.wappen,0);assert.equal(m.extras.products.qrset,1);
+});
+test('one-photo special request can use a verified single album',()=>{
+  const m=E.recommend({...base,pob:'want',pobOffer:'auto',budget:20800,cap:1,music:'cd'},prices);
+  assert.equal(m.offers[0].id,'makestar-single');assert.equal(m.total,20800);assert.equal(m.units,1);
+  assert.ok(E.recommend({...base,pob:'want',pobOffer:'makestar-yarn',budgetUnlimited:true,cap:1},prices).empty);
+});
+test('special offers obey both budget and capacity including separate shipping',()=>{
+  for(const offer of E.pobOffers)for(const goal of ['balanced','cards','chart']){
+    const a={...base,pob:'want',pobOffer:offer.id,goal,budget:150000,cap:8};
+    const m=E.recommend(a,prices,3000);assert.ok(m.empty||m.total+3000<=a.budget);assert.ok(m.units<=a.cap);
+    if(!m.empty)assert.equal(m.offers[0].id,offer.id);
+  }
+});
 console.log(`${checks} calculation tests passed.`);

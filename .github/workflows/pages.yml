@@ -48,6 +48,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci && npm test
+      - name: Verify PULSE FIT recommendation logic
+        run: |
+          node pulse-fit/test-engine.cjs
+          node pulse-fit/test-ui-render.cjs
       - name: Retain chart observations
         run: |
           git config user.name 'github-actions[bot]'

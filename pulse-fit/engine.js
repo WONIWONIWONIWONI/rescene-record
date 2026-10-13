@@ -9,6 +9,18 @@
     { id:'wappen', name:'Wappen', ko:'와펜', price:11100, units:1, cards:1, cd:false, book:false, source:'https://www.yes24.com/product/goods/198003383', tag:'와펜 · 굿즈 소장', contents:['와펜 90 × 58mm 1개','포카 5종 중 1장'], note:'공개 구성에는 CD와 QR 음원 카드가 없습니다. 초동 반영은 상품별 확인이 필요해 기본 집계 계산에서 제외합니다.' }
   ];
   const defaultPrices = Object.fromEntries(catalog.map(p=>[p.id,p.price]));
+  // Seven complete-bundle offers from the user's 2026-10-13 guide. Single option verified at MAKESTAR.
+  const pobOffers=[
+    {id:'baemin-limited',seller:'배민',name:'Limited 5개 세트',gift:'중복 없는 미공포',price:130000,products:{limited:5},complete:true,verified:false,source:'https://www.baemin.com/',channel:'배민 앱에서 PULSE 검색'},
+    {id:'cu-qr',seller:'CU',name:'QR 5종 세트',gift:'중복 없는 미공포',price:44500,products:{qrset:1},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'포켓CU 앱에서 예약 상품 확인'},
+    {id:'cu-wappen',seller:'CU',name:'Wappen 2개 세트',gift:'중복 없는 미공포 · 유닛',price:22200,products:{wappen:2},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'포켓CU 앱에서 예약 상품 확인'},
+    {id:'makestar-yarn',seller:'메이크스타',name:'Standard 5개 세트',gift:'중복 없는 털실냥이 미공포',price:104000,products:{standard:5},complete:true,verified:true,source:'https://www.makestar.com/product/21195',channel:'한 주문에서 5개 구매 · 11/02 23:59 KST까지'},
+    {id:'makestar-bite',seller:'메이크스타',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 한입만 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://www.makestar.com/product/21196',channel:'쇼케이스 상품 · 10/16 23:59 KST 마감 안내'},
+    {id:'whosfan-wappen',seller:'후즈팬',name:'Wappen 5개 세트',gift:'중복 없는 미공포 · 개인',price:55500,products:{wappen:5},complete:true,verified:false,source:'https://whosfanstore.com/products/%EC%98%88%ED%8C%90-%ED%8A%B9%EC%A0%84-%EC%A6%9D%EC%A0%95-%EC%9D%B4%EB%B2%A4%ED%8A%B8-rescene-4th-mini-album-pulse-wappen-ver',channel:'예판 특전 이벤트 상품'},
+    {id:'whosfan-showcase',seller:'후즈팬',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://whosfanstore.com/products/1103-%EC%87%BC%EC%BC%80%EC%9D%B4%EC%8A%A4-rescene%EB%A6%AC%EC%84%BC%EB%8A%90-the-4th-mini-album-pulse-standard-ver',channel:'쇼케이스 전용 이벤트 상품'},
+    {id:'makestar-single',seller:'메이크스타',name:'Standard 단품',gift:'털실냥이 미공포 5종 중 랜덤 1장',price:20800,products:{standard:1},complete:false,verified:true,source:'https://www.makestar.com/product/21195',channel:'특전 1장만 필요할 때 · 전종 보장 없음'}
+  ];
+  function productCounts(products){return {s:products.standard||0,l:products.limited||0,q:(products.qr||0)+5*(products.qrset||0),w:products.wappen||0};}
   function choose(n,k) { if(k<0||k>n)return 0; let v=1;for(let i=1;i<=k;i++)v=v*(n-i+1)/i;return v; }
   const probabilityCache = new Map();
   function completion(n,k,packs) {
@@ -45,31 +57,34 @@
     return {grade:'I',name:'균형 탐색형',line:'지금 내 취향에 맞는 만큼, 가볍게 시작해요.',color:'gold'};
   }
   function optimize(a,prices,shipping=0){
-    const budget=Math.max(0,a.budget-shipping),cap=Math.min(100,Math.max(1,a.cap));
+    const initial=a.initialCounts||{s:0,l:0,q:0,w:0};
+    const initialUnits=initial.s+initial.l+initial.q+initial.w;
+    const budget=a.budgetUnlimited?Infinity:Math.max(0,a.budget-shipping),cap=Math.max(0,Math.min(100,Math.max(1,a.cap))-initialUnits);
     const forceSets=a.collect==='complete'&&(a.scope==='qr'||a.scope==='all');
     const scope=a.collect==='complete'?a.scope:'none';
-    const weights={book:[100,85,15,10],cards:[32,24,80,15],object:[65,90,22,65],balanced:[75,58,42,32],chart:[3,3,2,0]}[a.goal]||[75,58,42,32];
+    const weights={book:[100,85,15,10],cards:[32,24,80,15],object:[65,90,22,65],balanced:[75,58,42,32],chart:[0,0,0,0]}[a.goal]||[75,58,42,32];
     const minCost=Math.min(prices.standard,prices.limited,prices.qr,prices.qrset/5,prices.wappen);
-    if(a.music==='cd'&&Math.min(prices.standard,prices.limited)>budget)return {empty:true,...metrics({s:0,l:0,q:0,w:0},prices,shipping,forceSets),score:0};
-    if(budget<minCost)return {empty:true,...metrics({s:0,l:0,q:0,w:0},prices,shipping,forceSets),score:0};
+    if(a.music==='cd'&&initial.s+initial.l===0&&Math.min(prices.standard,prices.limited)>budget)return {empty:true,...metrics({s:0,l:0,q:0,w:0},prices,shipping,forceSets),score:0};
+    if(budget<minCost&&initialUnits===0)return {empty:true,...metrics({s:0,l:0,q:0,w:0},prices,shipping,forceSets),score:0};
     const desired=requirements(scope,a.trade);
     const utility={s:[],l:[],q:[],w:[]};
     for(let n=0;n<=cap;n++){
-      utility.s[n]=weights[0]*(n>0?1:0);
-      utility.l[n]=weights[1]*(n>0?1:0);
-      utility.q[n]=weights[2]*(n>0?1:0)+((a.goal==='object'||a.collect==='member')?15*Math.min(n/5,1):0);
-      utility.w[n]=weights[3]*(n>0?1:0);
-      if(scope==='standard'||scope==='all')utility.s[n]+=240*(a.trade==='no'?(expected(10,2,n)/10+expected(5,1,n)/5)/2:Math.min(n/desired.s,1));
-      if(scope==='limited'||scope==='all')utility.l[n]+=240*(a.trade==='no'?expected(10,2,n)/10:Math.min(n/desired.l,1));
-      if(scope==='qr'||scope==='all')utility.q[n]+=240*(a.trade==='no'?(expected(15,3,n)/15+expected(4,2,Math.floor(n/5))/4)/2:Math.min(n/desired.q,1));
-      if(scope==='wappen'||scope==='all')utility.w[n]+=240*(a.trade==='no'?expected(5,1,n)/5:Math.min(n/desired.w,1));
-      if(a.collect==='member') {utility.s[n]+=n?12:0;utility.l[n]+=n?12:0;utility.q[n]+=n?24:0;utility.w[n]+=n?12:0;}
-      if(a.goal==='cards'&&a.collect!=='complete'){utility.s[n]+=15*Math.min(n,2);utility.l[n]+=10*Math.min(n,2);utility.q[n]+=30*Math.min(n,3);utility.w[n]+=5*Math.min(n,2);}
-      if(a.goal==='chart'){utility.s[n]+=1000*n;utility.l[n]+=1000*n;utility.q[n]+=1000*n;}
+      const ns=initial.s+n,nl=initial.l+n,nq=initial.q+n,nw=initial.w+n;
+      utility.s[n]=weights[0]*(ns>0?1:0);
+      utility.l[n]=weights[1]*(nl>0?1:0);
+      utility.q[n]=weights[2]*(nq>0?1:0)+((a.goal==='object'||a.collect==='member')?15*Math.min(nq/5,1):0);
+      utility.w[n]=weights[3]*(nw>0?1:0);
+      if(scope==='standard'||scope==='all')utility.s[n]+=240*(a.trade==='no'?(expected(10,2,ns)/10+expected(5,1,ns)/5)/2:Math.min(ns/desired.s,1));
+      if(scope==='limited'||scope==='all')utility.l[n]+=240*(a.trade==='no'?expected(10,2,nl)/10:Math.min(nl/desired.l,1));
+      if(scope==='qr'||scope==='all')utility.q[n]+=240*(a.trade==='no'?(expected(15,3,nq)/15+expected(4,2,Math.floor(nq/5))/4)/2:Math.min(nq/desired.q,1));
+      if(scope==='wappen'||scope==='all')utility.w[n]+=240*(a.trade==='no'?expected(5,1,nw)/5:Math.min(nw/desired.w,1));
+      if(a.collect==='member') {utility.s[n]+=ns?12:0;utility.l[n]+=nl?12:0;utility.q[n]+=nq?24:0;utility.w[n]+=nw?12:0;}
+      if(a.goal==='cards'&&a.collect!=='complete'){utility.s[n]+=15*Math.min(ns,2);utility.l[n]+=10*Math.min(nl,2);utility.q[n]+=30*Math.min(nq,3);utility.w[n]+=5*Math.min(nw,2);}
+      if(a.goal==='chart'){utility.s[n]+=1000*ns;utility.l[n]+=1000*nl;utility.q[n]+=1000*nq;}
     }
     const qrCosts=Array.from({length:cap+1},(_,q)=>qrSplit(q,prices,forceSets).cost);
     let best=null;
-    const bookRequired=(a.music==='cd'||a.goal==='book')&&Math.min(prices.standard,prices.limited)<=budget;
+    const bookRequired=initial.s+initial.l===0&&(a.music==='cd'||a.goal==='book')&&Math.min(prices.standard,prices.limited)<=budget;
     for(let s=0;s<=Math.min(cap,Math.floor(budget/prices.standard));s++){
       const baseS=s*prices.standard;
       for(let l=0;l<=Math.min(cap-s,Math.floor((budget-baseS)/prices.limited));l++){
@@ -79,13 +94,13 @@
           const base=baseL+w*prices.wappen;
           for(let q=0;q<=cap-s-l-w;q++){
             const cost=base+qrCosts[q];if(cost>budget)continue;
-            if(s+l+w+q===0)continue;
-            if(a.music==='listen'&&s+l+q===0)continue;
+            if(s+l+w+q+initialUnits===0)continue;
+            if(a.music==='listen'&&s+l+q+initial.s+initial.l+initial.q===0)continue;
             // Interest affects only the value of variety; it never expands the stated budget/cap.
-            const variety=Number(s>0)+Number(l>0)+Number(q>0)+Number(w>0);
+            const variety=Number(s+initial.s>0)+Number(l+initial.l>0)+Number(q+initial.q>0)+Number(w+initial.w>0);
             let score=utility.s[s]+utility.l[l]+utility.q[q]+utility.w[w];
             if(a.fan==='steady'&&a.goal==='balanced')score+=4*variety;
-            if(a.goal!=='chart')score-=0.08*Math.max(0,s+l+w+q-variety);
+            if(a.goal!=='chart')score-=0.08*Math.max(0,s+l+w+q+initialUnits-variety);
             if(!best||score>best.score+1e-8||(Math.abs(score-best.score)<1e-8&&cost<best.cost))best={s,l,w,q,score,cost};
           }
         }
@@ -93,6 +108,30 @@
     }
     if(!best)return {empty:true,...metrics({s:0,l:0,q:0,w:0},prices,shipping,forceSets),score:0};
     return {...metrics(best,prices,shipping,forceSets),score:best.score,empty:false};
+  }
+  function recommend(a,prices,shipping=0){
+    if(!a.pob||a.pob==='none')return {...optimize(a,prices,shipping),offers:[]};
+    const selected=a.pobOffer||'auto';
+    const groups=a.pob==='all'?[pobOffers.filter(o=>o.complete)]:pobOffers.filter(o=>selected==='auto'||o.id===selected).map(o=>[o]);
+    let best=null;
+    for(const offers of groups){
+      const products=Object.fromEntries(catalog.map(p=>[p.id,0]));
+      let bundleCost=0;
+      for(const offer of offers){bundleCost+=offer.price;for(const [id,n] of Object.entries(offer.products))products[id]+=n;}
+      const initial=productCounts(products),units=initial.s+initial.l+initial.q+initial.w;
+      if(units>a.cap||(!a.budgetUnlimited&&bundleCost+shipping>a.budget))continue;
+      const extras=optimize({...a,budget:a.budgetUnlimited?0:a.budget-bundleCost,initialCounts:initial},prices,shipping);
+      if(extras.empty)continue;
+      for(const p of catalog)products[p.id]+=extras.products[p.id];
+      const counts=productCounts(products),total=bundleCost+extras.total;
+      const totalUnits=counts.s+counts.l+counts.q+counts.w;
+      const m={...extras,products,counts,total,units:totalUnits,chart:counts.s+counts.l+counts.q,cards:counts.s*3+counts.l*2+counts.q*5+counts.w,books:counts.s+counts.l,qrsets:products.qrset,offers,extras,bundleCost};
+      if(!best||m.score>best.score+1e-8||(Math.abs(m.score-best.score)<1e-8&&m.total<best.total))best=m;
+    }
+    if(best)return best;
+    const costs=groups.map(g=>g.reduce((sum,o)=>sum+o.price,0));
+    const quantities=groups.map(g=>g.reduce((sum,o)=>sum+Object.entries(o.products).reduce((n,[id,count])=>n+count*(id==='qrset'?5:1),0),0));
+    return {...metrics({s:0,l:0,q:0,w:0},prices,shipping),empty:true,score:0,offers:[],pobBlocked:true,minimumPobCost:Math.min(...costs),minimumPobUnits:Math.min(...quantities)};
   }
   function pools(c,prices,setsOverride){
     const sets=setsOverride===undefined?qrSplit(c.q,prices).qrset:setsOverride;
@@ -105,6 +144,6 @@
       {key:'wappen',name:'Wappen 포카',n:5,k:1,packs:c.w}
     ].map(p=>({...p,expected:expected(p.n,p.k,p.packs),probability:completion(p.n,p.k,p.packs),minimum:Math.ceil(p.n/p.k),n90:n90(p.n,p.k)}));
   }
-  const api={catalog,defaultPrices,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,pools};
+  const api={catalog,pobOffers,defaultPrices,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,recommend,pools,productCounts};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PulseEngine=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
