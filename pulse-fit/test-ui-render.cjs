@@ -13,15 +13,15 @@ const document={
 const context={document,localStorage:{getItem(){return null;},setItem(){}},location:{hash:'',origin:'https://example.test',pathname:'/'},navigator:{clipboard:{async writeText(){}}},console,Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-13T11:00:00Z']));}static now(){return Date.parse('2026-10-13T11:00:00Z');}},clearTimeout,setTimeout,FormData:class{},window:{scrollTo(){},addEventListener(){},print(){}}};
 vm.createContext(context);vm.runInContext(fs.readFileSync('pulse-fit/engine.js','utf8'),context);vm.runInContext(fs.readFileSync('pulse-fit/app.js','utf8'),context);
 function run(code){return vm.runInContext(code,context);}
-assert.ok(mainMarkup.includes('마음은 이미'));assert.equal(run('defaults.groupbuy'),'compare');run("defaults.groupbuy='none';");
+assert.ok(mainMarkup.includes('마음은 이미'));assert.equal(run('defaults.groupbuy'),'compare');
 for(let step=0;step<10;step++){run(`step=${step};view='quiz';quiz();`);assert.ok(mainMarkup.includes(`${step+1} / 10`));assert.ok(mainMarkup.includes('id="quiz-next"'));}
 run("answers={...defaults,collect:'complete',scope:'qr'};step=3;quiz();");assert.ok(mainMarkup.includes('scope-select'));
 run("answers={...defaults,cap:12};step=7;quiz();");assert.ok(mainMarkup.includes('cap-value'));
-run("answers={...defaults};view='result';results();");assert.ok(mainMarkup.includes('40,800원'));assert.ok(mainMarkup.includes('나의 PULSE 구매 보고서'));
-run("answers={...defaults,budget:378500,cap:25,collect:'complete',scope:'all',goal:'cards'};results();");assert.ok(mainMarkup.includes('378,500원'));assert.ok(mainMarkup.includes('교환 전제 최소 25개'));assert.ok(mainMarkup.includes('QR 5종 세트'));
+run("answers={...defaults};view='result';results();");assert.ok(mainMarkup.includes('45,300원'));assert.ok(mainMarkup.includes('나의 PULSE 구매 보고서'));
+run("answers={...defaults,budget:378500,cap:25,collect:'complete',scope:'all',goal:'cards'};results();");assert.ok(mainMarkup.includes('307,900원'));assert.ok(mainMarkup.includes('교환 전제 최소 25개'));assert.ok(mainMarkup.includes('QR 5종 세트'));
 run("answers={...defaults,budget:0};results();");assert.ok(mainMarkup.includes('지금은 구매 보류'));
 run("view='compare';compare();");assert.ok(mainMarkup.includes('15종 중 3장'));assert.ok(mainMarkup.includes('Wappen'));
-run("view='calculator';calculator();");assert.ok(markup.includes('44,500원'));assert.ok(markup.includes('25장'));
+run("view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(markup.includes('25장'));
 assert.equal(run("validAnswers({budget:-9,cap:1000,goal:'<script>',collect:'invalid'}).budget"),50000);
 assert.equal(run("validAnswers({budget:2000000,cap:100}).cap"),100);
 run("answers={...defaults,budgetUnlimited:true};step=1;quiz();");assert.ok(mainMarkup.includes('✓ 예산 무제한'));assert.ok(mainMarkup.includes('금액 제한 없음'));
@@ -50,8 +50,8 @@ run("view='pob';pobPage();");assert.ok(mainMarkup.includes('후즈팬 · 쇼케�
 console.log('PASS showcase question validation, budgets, opt-out, gifts, result summary and event guide.');
 
 run("answers={...defaults,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'complete',scope:'all'};view='result';results();");
-assert.ok(mainMarkup.includes('CU · Wappen 단품'));assert.ok(mainMarkup.includes('추가 수집용'));assert.ok(mainMarkup.includes('특전·응모 상품에 든 2개를 이미 반영'));assert.ok(mainMarkup.includes('2개를 더해 총 4개'));assert.ok(mainMarkup.includes('1개 부족한 부분 수집 계획'));assert.ok(mainMarkup.includes('109,000원'));
-assert.equal(run('result.extras.products.wappen'),0);assert.ok(run('summaryText()').includes('CU Wappen 단품 × 2'));
+assert.ok(mainMarkup.includes('ALL MD 총공 공구 · Wappen'));assert.ok(mainMarkup.includes('특전·응모 상품에 든 2개를 이미 반영'));assert.ok(mainMarkup.includes('3개를 더해 총 5개'));assert.ok(mainMarkup.includes('94,800원'));
+assert.equal(run('result.extras.products.wappen'),3);assert.ok(run('summaryText()').includes('ALL MD 총공 공구'));
 run("answers={...defaults,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'keepsake'};results();");assert.ok(!mainMarkup.includes('CU · Wappen 단품'));assert.equal(run('result.products.wappen'),2);
 console.log('PASS same-price CU replacement, collection shortfall explanation and no repeated keepsake Wappen.');
 
@@ -61,7 +61,7 @@ run("answers={...defaults,groupbuy:'compare',budget:16900,cap:1,music:'cd'};resu
 run("answers.groupShipping_allmd=4000;answers.groupShipping_ktown=4000;results();");assert.ok(mainMarkup.includes('구매 보류'));
 run("answers={...defaults,groupbuy:'compare'};settingsOpen();");assert.ok(markup.includes('settings-groupbuy'));assert.ok(markup.includes('groupShipping_allmd'));
 run("calcShop='allmd';calcCounts={standard:0,limited:0,qr:0,qrset:1,wappen:0};view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(mainMarkup.includes('calc-shop'));
-assert.equal(run("validAnswers({groupbuy:'<script>',groupShipping_allmd:-1}).groupbuy"),'none');assert.equal(run("validAnswers({groupbuy:'allmd',groupShipping_allmd:4000}).groupShipping_allmd"),4000);
+assert.equal(run("validAnswers({groupbuy:'<script>',groupShipping_allmd:-1}).groupbuy"),'compare');assert.equal(run("validAnswers({groupbuy:'allmd',groupShipping_allmd:4000}).groupShipping_allmd"),4000);
 console.log('PASS group-buy selection, actual purchase labels, shipping status and inputs, calculator and URL validation.');
 
 run("answers={...defaults,pob:'want',pobFormat:'set',pobKind:'individual'};step=4;quiz();");assert.ok(mainMarkup.includes('pob-kind'));assert.ok(mainMarkup.includes('pob-priority'));assert.ok(mainMarkup.includes('CU · QR 5종 세트'));assert.ok(!mainMarkup.includes('CU · Wappen 2개 세트'));
@@ -70,3 +70,9 @@ run("answers.cap=3;results();");assert.ok(mainMarkup.includes('보관 상한 초
 run("answers={...defaults,pob:'want',pobFormat:'set',pobKind:'unit',goal:'cards',budget:50000,cap:8};results();");assert.equal(run('result.offers[0].id'),'cu-wappen');
 assert.equal(run("validAnswers({pobKind:'fake',pobPriority:'fake'}).pobKind"),'any');assert.equal(run("validAnswers({pob:'want',pobKind:'unit',pobOffer:'cu-qr'}).pobOffer"),'auto');assert.ok(run("summaryText()").includes('유닛'));
 console.log('PASS gift kind/priority controls, CU QR fairness, candidate reasons and distinct-gift disclosure.');
+
+run("loadState({answers:{groupbuy:'none',pob:'none',budget:16900,cap:1,music:'cd'}});view='result';results();");assert.equal(run('answers.groupbuy'),'compare');assert.ok(mainMarkup.includes('16,900원'));assert.ok(mainMarkup.includes('ALL MD 총공 공구 · Standard'));
+run("answers={...defaults,pob:'want',pobOffer:'cu-qr',budget:44500,cap:5,collect:'complete',scope:'qr'};results();");assert.ok(mainMarkup.includes('44,500원'));assert.ok(mainMarkup.includes('공구 상품가 기준'));assert.ok(mainMarkup.includes('72,400원'));
+run("calcShop='auto';calcCounts={standard:0,limited:0,qr:0,qrset:1,wappen:0};view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(!mainMarkup.includes('일반 기준가'));
+run("answers={...defaults};step=1;quiz();");assert.ok(!mainMarkup.includes('공구 제외'));assert.ok(mainMarkup.includes('미공포 없는 앨범은 공구가로 예산'));
+console.log('PASS mandatory bare group prices in recommendation, old links, collection roadmap, calculator and budget controls.');

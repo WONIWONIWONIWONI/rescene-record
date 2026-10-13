@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const E = require('./engine.js');
 const prices = E.defaultPrices;
-const base = {fan:'light',budget:50000,goal:'balanced',collect:'keepsake',scope:'qr',trade:'yes',cap:3,music:'any',firstweek:'maybe'};
+const base = {now:Date.parse('2026-10-13T11:00:00Z'),fan:'light',budget:50000,goal:'balanced',collect:'keepsake',scope:'qr',trade:'yes',cap:3,music:'any',firstweek:'maybe'};
 let checks=0;
 function test(name,run){run();checks++;console.log('PASS '+name);}
 // Independent inclusion-exclusion calculation checks the dynamic probability model.
@@ -33,7 +33,7 @@ test('minimum price bundling chooses cheaper singles or discounted sets',()=>{co
 test('90 percent quantities actually reach the specified pool threshold',()=>{for(const [n,k] of [[4,2],[5,1],[10,2],[15,3]]){const count=E.n90(n,k);assert.ok(E.completion(n,k,count)>=.9);assert.ok(E.completion(n,k,count-1)<.9);}});
 test('unlimited budget removes the money bound but retains the unit bound',()=>{
   const m=E.recommend({...base,budget:0,budgetUnlimited:true,cap:100,goal:'chart'},prices);
-  assert.equal(m.chart,100);assert.equal(m.units,100);assert.equal(m.total,890000);
+  assert.equal(m.chart,100);assert.equal(m.units,100);assert.equal(m.total,724000);
   assert.ok(E.recommend({...base,budget:0,budgetUnlimited:false},prices).empty);
 });
 test('CU Wappen pair uses the corrected 22,200 price',()=>{
@@ -48,8 +48,8 @@ test('all seven special bundles total 564,200 and count 32 actual units',()=>{
 });
 test('special-bundle albums contribute to full album-photocard goals',()=>{
   const m=E.recommend({...base,pob:'all',budgetUnlimited:true,cap:50,goal:'cards',collect:'complete',scope:'all'},prices);
-  assert.equal(m.total,608700);assert.equal(m.units,37);assert.equal(m.products.qrset,2);assert.equal(m.products.standard,15);assert.equal(m.products.limited,5);assert.equal(m.products.wappen,7);
-  assert.equal(m.extras.products.standard,0);assert.equal(m.extras.products.limited,0);assert.equal(m.extras.products.wappen,0);assert.equal(m.additionalCounts.q,5);assert.equal(m.offers.find(o=>o.id==='cu-qr'&&o.additionalPurchase).quantity,1);
+  assert.equal(m.total,600400);assert.equal(m.units,37);assert.equal(m.products.qrset,2);assert.equal(m.products.standard,15);assert.equal(m.products.limited,5);assert.equal(m.products.wappen,7);
+  assert.equal(m.extras.products.standard,0);assert.equal(m.extras.products.limited,0);assert.equal(m.extras.products.wappen,0);assert.equal(m.additionalCounts.q,5);assert.equal(m.extras.products.qrset,1);assert.equal(m.extras.groupVenue.id,'allmd');
 });
 test('one-photo special request can use a verified single album',()=>{
   const m=E.recommend({...base,pob:'want',pobOffer:'auto',budget:20800,cap:1,music:'cd'},prices);
@@ -100,7 +100,7 @@ test('own target respects the budget and shows shortfall instead of increasing l
 });
 test('showcase priority uses event albums rather than cheap non-event QR entries',()=>{
   const m=E.recommend({...eventBase,showcase:'priority',goal:'chart',budget:50000,cap:8},prices);
-  assert.equal(m.showcaseEntries,2);assert.equal(m.products.standard,2);assert.ok(m.total<=50000);assert.equal(m.chart,2);
+  assert.equal(m.showcaseEntries,2);assert.equal(m.products.standard,2);assert.ok(m.total<=50000);assert.equal(m.chart,3);
 });
 test('unlimited showcase budget still enforces storage cap',()=>{
   const m=E.recommend({...eventBase,showcase:'priority',budgetUnlimited:true,cap:8},prices);
@@ -139,11 +139,10 @@ test('showcase max agrees with independent per-album capacity calculation',()=>{
 });
 
 
-test('reported CU Wappen screenshot preserves four actual albums but routes the extra two to CU',()=>{
+test('reported CU Wappen scenario uses group prices for unneeded-gift extras',()=>{
   const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'complete',scope:'all'},prices);
-  assert.equal(m.total,109000);assert.equal(m.units,8);assert.equal(m.cards,19);assert.equal(m.products.wappen,4);
-  assert.equal(m.initialCounts.w,2);assert.equal(m.additionalCounts.w,2);assert.equal(m.extras.products.wappen,0);
-  const more=m.offers.find(o=>o.additionalPurchase&&o.id==='cu-wappen-single');assert.equal(more.quantity,2);assert.equal(more.price,22200);
+  assert.equal(m.total,94800);assert.equal(m.units,8);assert.equal(m.cards,15);assert.equal(m.products.wappen,5);
+  assert.equal(m.initialCounts.w,2);assert.equal(m.additionalCounts.w,3);assert.equal(m.extras.products.wappen,3);assert.equal(m.extras.itemPrices.wappen,9100);assert.equal(m.offers.length,1);
 });
 test('a keepsake buyer never buys extra Wappen simply because CU has gifts',()=>{
   const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'keepsake'},prices);
@@ -151,17 +150,17 @@ test('a keepsake buyer never buys extra Wappen simply because CU has gifts',()=>
 });
 test('CU bundle albums satisfy two of five enclosed-card trade draws, with only three added',()=>{
   const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:55500,cap:5,collect:'complete',scope:'wappen',goal:'object'},prices);
-  assert.equal(m.products.wappen,5);assert.equal(m.total,55500);assert.equal(m.cards,5);assert.equal(m.offers.find(o=>o.additionalPurchase).quantity,3);
+  assert.equal(m.products.wappen,5);assert.equal(m.total,49500);assert.equal(m.cards,5);assert.equal(m.extras.products.wappen,3);
 });
 test('costlier retailer extras do not replace an otherwise equivalent cheaper general album',()=>{
   const p={...prices,'offer_cu-wappen-single':12000};
   const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:55500,cap:5,collect:'complete',scope:'wappen',goal:'object'},p);
-  assert.equal(m.products.wappen,5);assert.equal(m.extras.products.wappen,3);assert.equal(m.offers.length,1);assert.equal(m.total,55500);
+  assert.equal(m.products.wappen,5);assert.equal(m.extras.products.wappen,3);assert.equal(m.offers.length,1);assert.equal(m.total,49500);
 });
 test('discounted retailer extras use their actual price during optimization',()=>{
-  const p={...prices,'offer_cu-wappen-single':10000};
+  const p={...prices,'offer_cu-wappen-single':8000};
   const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:52200,cap:5,collect:'complete',scope:'wappen',goal:'object'},p);
-  assert.equal(m.products.wappen,5);assert.equal(m.total,52200);assert.equal(m.offers.find(o=>o.additionalPurchase).price,30000);
+  assert.equal(m.products.wappen,5);assert.equal(m.total,46200);assert.equal(m.offers.find(o=>o.additionalPurchase).price,24000);
 });
 test('routed retailer purchases reconcile products, price, physical units and cards without double counting',()=>{
   for(const offer of E.pobOffers)for(const scope of ['standard','limited','qr','wappen','all']){
@@ -173,9 +172,9 @@ test('routed retailer purchases reconcile products, price, physical units and ca
     const c=E.productCounts(products);assert.equal(m.units,c.s+c.l+c.q+c.w);assert.equal(m.cards,c.s*3+c.l*2+c.q*5+c.w);assert.ok(m.total+2000<=400000);assert.ok(m.units<=25);
   }
 });
-test('MakeStar collection extras routed to its showcase listing update entries once',()=>{
+test('only the requested MakeStar event album counts; extra enclosed-card collection uses group price',()=>{
   const m=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-showcase-single',showcase:'target',showcaseTarget:1,budget:200000,cap:8,collect:'complete',scope:'standard',goal:'balanced'},prices);
-  assert.equal(m.products.standard,5);assert.equal(m.showcaseEntries,5);assert.equal(m.total,150000);assert.equal(m.units,8);assert.equal(m.cards,23);
+  assert.equal(m.products.standard,5);assert.equal(m.showcaseEntries,1);assert.equal(m.total,125900);assert.equal(m.units,8);assert.equal(m.cards,23);assert.equal(m.extras.products.standard,4);assert.equal(m.extras.itemPrices.standard,16900);
 });
 
 
@@ -193,9 +192,9 @@ test('unknown shipping is explicitly conditional, while known shipping enforces 
   const m=E.recommend(a,prices);assert.equal(m.total,16900);assert.equal(m.groupShippingUnknown,true);
   assert.ok(E.recommend({...a,groupShipping_allmd:4000,groupShipping_ktown:4000},prices).empty);
 });
-test('a sufficiently expensive group delivery can make the regular purchase cheaper',()=>{
+test('even when regular delivery would be cheaper, bare albums use group pricing',()=>{
   const m=E.recommend({...groupBase,budget:25000,cap:1,music:'cd',groupShipping_allmd:5000,groupShipping_ktown:5000},prices);
-  assert.equal(m.products.standard,1);assert.equal(m.total,20800);assert.equal(m.groupVenue,null);assert.equal(m.checkoutTotal,20800);
+  assert.equal(m.products.standard,1);assert.equal(m.total,16900);assert.equal(m.groupVenue.id,'allmd');assert.equal(m.checkoutTotal,21900);
 });
 test('free shipping counts the ALL MD order only, never the CU event subtotal',()=>{
   const m=E.recommend({...groupBase,pob:'want',pobOffer:'cu-wappen',budget:70000,cap:7,collect:'complete',scope:'qr',goal:'cards',groupShipping_allmd:4000,groupShipping_ktown:4000},prices);
@@ -209,14 +208,14 @@ test('group prices cannot discount a five-entry showcase product',()=>{
   const m=E.recommend({...groupBase,pob:'want',pobOffer:'makestar-bite',showcase:'target',showcaseTarget:5,budget:104000,cap:5},prices);
   assert.equal(m.total,104000);assert.equal(m.showcaseEntries,5);assert.equal(m.groupSubtotal,0);assert.equal(m.products.standard,5);
 });
-test('mixed regular/group items retain actual per-product source and group delivery subtotal',()=>{
+test('general reference price overrides cannot replace mandatory group pricing',()=>{
   const p={...prices,standard:10000};
   const m=E.recommend({...groupBase,budget:21300,cap:2,music:'cd',groupShipping_allmd:1000,groupShipping_ktown:1000},p,3000);
-  assert.equal(m.products.standard,1);assert.equal(m.products.qr,1);assert.equal(m.extras.itemPrices.standard,10000);assert.equal(m.extras.itemSources.standard,'');assert.equal(m.extras.itemSources.qr,'ALL MD 총공 공구');assert.equal(m.groupSubtotal,7300);assert.equal(m.orderShipping,1000);assert.equal(m.checkoutTotal,21300);
+  assert.equal(m.products.standard,1);assert.equal(m.products.qr,0);assert.equal(m.extras.itemPrices.standard,16900);assert.equal(m.extras.itemSources.standard,'ALL MD 총공 공구');assert.equal(m.groupSubtotal,16900);assert.equal(m.orderShipping,1000);assert.equal(m.checkoutTotal,20900);
 });
 test('group offer deadlines remove expired prices without changing special-event eligibility',()=>{
   const m=E.recommend({...groupBase,groupbuy:'ktown',now:Date.parse('2026-11-03T08:00:01Z'),budget:50000,cap:3},prices);
-  assert.equal(m.groupExpired,true);assert.equal(m.groupVenue,null);assert.equal(m.total,40800);
+  assert.equal(m.groupExpired,false);assert.equal(m.groupFallback,true);assert.equal(m.groupVenue.id,'allmd');assert.equal(m.total,45300);
 });
 test('delivery does not cause unnecessary extra keepsake albums just to reach a free threshold',()=>{
   const m=E.recommend({...groupBase,budget:100000,cap:20,groupShipping_allmd:3000,groupShipping_ktown:3000},prices);
@@ -278,5 +277,32 @@ test('gift-weight changes never exceed budget or capacity and preserve exact cos
 test('special-gift score retains verified showcase entry priority',()=>{
   const m=E.recommend({...pobBase,pobPriority:'collect',showcase:'priority',budget:104000,cap:5},prices);
   assert.equal(m.showcaseEntries,5);assert.equal(m.offers[0].id,'makestar-bite');assert.equal(m.total,104000);
+});
+
+
+test('missing and old exclude-group selections both apply bare group prices',()=>{
+  for(const groupbuy of [undefined,'none','general']){
+    const m=E.recommend({...base,groupbuy,budget:16900,cap:1,music:'cd'},prices);
+    assert.equal(m.total,16900);assert.equal(m.groupVenue.id,'allmd');assert.equal(m.groupChoice,'compare');assert.equal(m.cards,3);
+  }
+});
+test('all five non-POB price measurements use the guide group prices',()=>{
+  for(const p of E.catalog){const quote=E.bareQuote({[p.id]:1},{...base,groupbuy:'none'},prices);assert.equal(quote.total,E.groupBuys[0].prices[p.id]);assert.equal(quote.groupVenue.id,'allmd');}
+  assert.equal(E.bareQuote({qrset:1},{...base,groupbuy:'ktown'},prices).total,40700);
+});
+test('bare group shipping is included even when ordinary prices would fit the budget',()=>{
+  const m=E.recommend({...base,budget:20800,cap:1,music:'cd',groupShipping_allmd:5000,groupShipping_ktown:5000},prices);
+  assert.ok(m.empty);
+});
+test('all closed group buys expose ordinary prices only as a marked reference fallback',()=>{
+  const a={...base,now:Date.parse('2026-11-10T00:00:00Z')},m=E.recommend(a,prices);
+  assert.equal(m.groupExpired,true);assert.equal(m.groupVenue,null);assert.equal(m.total,40800);
+  assert.equal(E.bareQuote({standard:1},a,prices).groupExpired,true);assert.equal(E.barePrices(a,prices).prices.standard,20800);
+});
+test('event-only and mixed baskets keep event prices instead of inheriting group discounts',()=>{
+  const only=E.recommend({...base,pob:'want',pobOffer:'cu-qr',budget:44500,cap:5},prices);
+  assert.equal(only.total,44500);assert.equal(only.offers[0].price,44500);assert.equal(only.pobMetrics.guaranteedUnique,5);
+  const mixed=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:49500,cap:5,goal:'object',collect:'complete',scope:'wappen'},prices);
+  assert.equal(mixed.offers[0].price,22200);assert.equal(mixed.extras.itemPrices.wappen,9100);assert.equal(mixed.total,49500);assert.equal(mixed.products.wappen,5);
 });
 console.log(`${checks} calculation tests passed.`);

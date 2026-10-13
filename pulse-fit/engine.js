@@ -190,7 +190,7 @@
         if(candidates[0]){routes[p.id]=candidates[0];extraPrices[p.id]=candidates[0].price;}
       }
       const shop=a.groupVenue;
-      const groupIds=shop?new Set(catalog.filter(p=>shop.prices[p.id]<=a.generalPrices[p.id]).map(p=>p.id)):new Set();
+      const groupIds=shop?new Set(catalog.filter(p=>true).map(p=>p.id)):new Set();
       const knownFee=shop?a['groupShipping_'+shop.id]:0;
       const orderFee=shop?(s,l,q,w,split)=>{
         const subtotal=(routes.standard||!groupIds.has('standard')?0:s*extraPrices.standard)+(routes.limited||!groupIds.has('limited')?0:l*extraPrices.limited)+(routes.wappen||!groupIds.has('wappen')?0:w*extraPrices.wappen)+(routes.qr||!groupIds.has('qr')?0:split.qr*extraPrices.qr)+(routes.qrset||!groupIds.has('qrset')?0:split.qrset*extraPrices.qrset);
@@ -225,18 +225,39 @@
     const quantities=groups.map(g=>g.reduce((sum,o)=>sum+Object.entries(o.products).reduce((n,[id,count])=>n+count*(id==='qrset'?5:1),0),0));
     return {...metrics({s:0,l:0,q:0,w:0},prices,shipping),empty:true,score:0,offers:[],candidateAudit,pobBlocked:!!a.pob&&a.pob!=='none',minimumPobCost:Math.min(...costs),minimumPobUnits:Math.min(...quantities),showcaseEntries:0,showcasePotential:0,showcaseStatus:status,showcaseTarget:target,showcaseShortfall:active&&a.showcase==='target'?target:0};
   }
+  function bareShops(a={}){
+    const choice=['allmd','ktown'].includes(a.groupbuy)?a.groupbuy:'compare',now=a.now===undefined?Date.now():a.now;
+    const active=groupBuys.filter(g=>groupOpen(g,now));
+    const selected=active.filter(g=>choice==='compare'||g.id===choice);
+    return {choice,shops:selected.length?selected:active,fallback:selected.length===0&&active.length>0,expired:active.length===0};
+  }
+  function barePrices(a,prices){
+    const info=bareShops(a),g=[...info.shops].sort((x,y)=>catalog.reduce((sum,p)=>sum+x.prices[p.id]-y.prices[p.id],0))[0];
+    return {prices:g?{...prices,...g.prices}:prices,groupVenue:g||null,groupExpired:info.expired};
+  }
+  function bareQuote(products,a,prices,shipping=0){
+    const info=bareShops(a),options=(info.shops.length?info.shops:[null]).map(g=>{
+      const itemPrices=g?{...prices,...g.prices}:prices;
+      const total=catalog.reduce((sum,p)=>sum+(products[p.id]||0)*itemPrices[p.id],0),fee=g?a['groupShipping_'+g.id]:0;
+      const free=!!(g&&g.freeShipping&&total>=g.freeShipping),unknown=!!(g&&total>0&&!free&&(fee===null||fee===undefined));
+      const orderShipping=total===0||free||unknown?0:fee;
+      return {total,itemPrices,groupVenue:g,orderShipping,groupShippingUnknown:unknown,checkoutTotal:total+orderShipping+(total?shipping:0),groupExpired:info.expired};
+    });
+    return options.sort((x,y)=>x.checkoutTotal-y.checkoutTotal)[0];
+  }
   function recommend(a,prices,shipping=0){
-    const choice=a.groupbuy||'none',now=a.now===undefined?Date.now():a.now;
-    const shops=groupBuys.filter(g=>groupOpen(g,now)&&(choice==='compare'||choice===g.id));
-    const options=[recommendCore(a,prices,shipping),...shops.map(g=>recommendCore({...a,groupVenue:g,generalPrices:prices},{...prices,...Object.fromEntries(catalog.map(p=>[p.id,Math.min(prices[p.id],g.prices[p.id])]))},shipping))];
+    const info=bareShops(a),choice=info.choice,shops=info.shops,now=a.now===undefined?Date.now():a.now;
+    // Bare albums always use an available group-buy price. Event prices remain fixed.
+    const venues=shops.length?shops:[null];
+    const options=venues.map(g=>g?recommendCore({...a,groupVenue:g,generalPrices:prices},{...prices,...g.prices},shipping):recommendCore(a,prices,shipping));
     const active=['target','priority'].includes(a.showcase)&&showcaseStatus(now)==='open';
     const target=Math.max(1,Math.min(100,a.showcaseTarget||1));
     const eventScore=m=>active?(a.showcase==='priority'?m.showcaseEntries:Math.min(m.showcaseEntries,target)):0;
     const feasible=options.filter(m=>!m.empty);
     feasible.sort((x,y)=>eventScore(y)-eventScore(x)||y.score-x.score||(x.checkoutTotal-y.checkoutTotal));
     const result=feasible[0]||options[0];
-    result.candidateAudit=options.flatMap((m,i)=>(m.candidateAudit||[]).map(c=>({...c,venue:i===0?'general':shops[i-1].id}))); 
-    result.groupChoice=choice;result.groupExpired=choice!=='none'&&shops.length===0;
+    result.candidateAudit=options.flatMap((m,i)=>(m.candidateAudit||[]).map(c=>({...c,venue:venues[i]?venues[i].id:'general'})));
+    result.groupChoice=choice;result.groupExpired=info.expired;result.groupFallback=info.fallback;
     return result;
   }
   function pools(c,prices,setsOverride){
@@ -250,6 +271,6 @@
       {key:'wappen',name:'Wappen 포카',n:5,k:1,packs:c.w}
     ].map(p=>({...p,expected:expected(p.n,p.k,p.packs),probability:completion(p.n,p.k,p.packs),minimum:Math.ceil(p.n/p.k),n90:n90(p.n,p.k)}));
   }
-  const api={catalog,pobOffers,groupBuys,groupOpen,showcaseEvent,showcaseStatus,defaultPrices,giftMetrics,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,recommend,pools,productCounts};
+  const api={catalog,pobOffers,groupBuys,groupOpen,bareShops,barePrices,bareQuote,showcaseEvent,showcaseStatus,defaultPrices,giftMetrics,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,recommend,pools,productCounts};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PulseEngine=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
