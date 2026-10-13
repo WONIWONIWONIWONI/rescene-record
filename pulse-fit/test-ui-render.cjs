@@ -63,3 +63,10 @@ run("answers={...defaults,groupbuy:'compare'};settingsOpen();");assert.ok(markup
 run("calcShop='allmd';calcCounts={standard:0,limited:0,qr:0,qrset:1,wappen:0};view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(mainMarkup.includes('calc-shop'));
 assert.equal(run("validAnswers({groupbuy:'<script>',groupShipping_allmd:-1}).groupbuy"),'none');assert.equal(run("validAnswers({groupbuy:'allmd',groupShipping_allmd:4000}).groupShipping_allmd"),4000);
 console.log('PASS group-buy selection, actual purchase labels, shipping status and inputs, calculator and URL validation.');
+
+run("answers={...defaults,pob:'want',pobFormat:'set',pobKind:'individual'};step=4;quiz();");assert.ok(mainMarkup.includes('pob-kind'));assert.ok(mainMarkup.includes('pob-priority'));assert.ok(mainMarkup.includes('CU · QR 5종 세트'));assert.ok(!mainMarkup.includes('CU · Wappen 2개 세트'));
+run("answers={...defaults,pob:'want',pobFormat:'set',goal:'cards',budget:50000,cap:8,groupbuy:'compare',groupShipping_allmd:3000,groupShipping_ktown:3000};view='result';results();");assert.equal(run('result.offers[0].id'),'cu-qr');assert.ok(mainMarkup.includes('44,500원'));assert.ok(mainMarkup.includes('개인 미공포 5장'));assert.ok(mainMarkup.includes('특전 후보를 이렇게 비교'));assert.ok(mainMarkup.includes('CU · Wappen 2개 세트'));assert.ok(mainMarkup.includes('25'));
+run("answers.cap=3;results();");assert.ok(mainMarkup.includes('보관 상한 초과 · 상품만 5개'));
+run("answers={...defaults,pob:'want',pobFormat:'set',pobKind:'unit',goal:'cards',budget:50000,cap:8};results();");assert.equal(run('result.offers[0].id'),'cu-wappen');
+assert.equal(run("validAnswers({pobKind:'fake',pobPriority:'fake'}).pobKind"),'any');assert.equal(run("validAnswers({pob:'want',pobKind:'unit',pobOffer:'cu-qr'}).pobOffer"),'auto');assert.ok(run("summaryText()").includes('유닛'));
+console.log('PASS gift kind/priority controls, CU QR fairness, candidate reasons and distinct-gift disclosure.');

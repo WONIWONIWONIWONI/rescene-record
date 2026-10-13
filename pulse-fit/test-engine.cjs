@@ -230,4 +230,53 @@ test('group/retailer baskets reconcile costs and quantities within both limits',
     assert.deepEqual(products,m.products);assert.equal(m.total,m.offers.reduce((sum,o)=>sum+o.price,0)+m.extras.total);assert.equal(m.checkoutTotal,m.total+m.orderShipping+2000);assert.ok(m.checkoutTotal<=budget);assert.ok(m.units<=cap);assert.equal(m.showcaseEntries,0);
   }
 });
+
+
+const pobBase={...groupBase,pob:'want',pobOffer:'auto',pobFormat:'set',pobKind:'any',pobPriority:'balanced',goal:'cards',budget:50000,cap:8,groupShipping_allmd:3000,groupShipping_ktown:3000};
+test('CU QR five-pack includes five distinct gift cards separately from its 25 enclosed cards',()=>{
+  const m=E.recommend(pobBase,prices);
+  assert.equal(m.offers[0].id,'cu-qr');assert.equal(m.total,44500);assert.equal(m.units,5);assert.equal(m.cards,25);assert.equal(m.pobMetrics.guaranteedUnique,5);assert.equal(m.pobMetrics.points,90);
+});
+test('a one-gift preference retains the cheaper variety basket instead of forcing CU QR',()=>{
+  const m=E.recommend({...pobBase,pobPriority:'one'},prices);
+  assert.equal(m.offers[0].id,'cu-wappen');assert.equal(m.pobMetrics.points,0);assert.ok(m.checkoutTotal<=50000);
+});
+test('personal versus unit photocard preferences filter the correct gift products',()=>{
+  assert.equal(E.recommend({...pobBase,pobKind:'individual'},prices).offers[0].id,'cu-qr');
+  const unit=E.recommend({...pobBase,pobKind:'unit'},prices);assert.equal(unit.offers[0].id,'cu-wappen');assert.equal(unit.pobMetrics.targetUnique,2);assert.ok(unit.offers.every(o=>o.giftKind==='unit'));
+});
+test('CU QR is rejected for actual five-album capacity, not one package',()=>{
+  const m=E.recommend({...pobBase,cap:3},prices);assert.notEqual(m.offers[0].id,'cu-qr');
+  assert.ok(m.candidateAudit.filter(c=>c.ids[0]==='cu-qr').every(c=>c.reason==='capacity'&&c.minimumUnits===5));
+});
+test('CU QR budget exclusion and CD requirements are exposed in audit',()=>{
+  const low=E.recommend({...pobBase,budget:40000},prices);assert.ok(low.candidateAudit.filter(c=>c.ids[0]==='cu-qr').every(c=>c.reason==='budget'));
+  const cd=E.recommend({...pobBase,cap:5,budget:100000,music:'cd'},prices);assert.ok(cd.candidateAudit.filter(c=>c.ids[0]==='cu-qr').every(c=>c.reason==='requirements'));
+});
+test('set-gift utility does not count identical duplicate sets or random cards as new guaranteed designs',()=>{
+  const offer=E.pobOffers.find(o=>o.id==='cu-qr'),single=E.pobOffers.find(o=>o.id==='cu-qr-single');
+  assert.equal(E.giftMetrics([{...offer,quantity:2,products:{qrset:2}}],pobBase).guaranteedUnique,5);
+  assert.equal(E.giftMetrics([{...single,quantity:5,products:{qr:5}}],pobBase).guaranteedUnique,1);
+  assert.equal(E.giftMetrics([offer,{...single,quantity:3,products:{qr:3}}],pobBase).guaranteedUnique,5);
+});
+test('confirmed one-order MakeStar gift threshold is reflected without combining different gift families',()=>{
+  const yarn=E.pobOffers.find(o=>o.id==='makestar-single'),bite=E.pobOffers.find(o=>o.id==='makestar-showcase-single');
+  assert.equal(E.giftMetrics([{...yarn,products:{standard:4}}],pobBase).guaranteedUnique,1);
+  assert.equal(E.giftMetrics([{...yarn,products:{standard:5}}],pobBase).guaranteedUnique,5);
+  assert.equal(E.giftMetrics([{...yarn,products:{standard:3}},{...bite,products:{standard:2}}],pobBase).guaranteedUnique,2);
+});
+test('group-buy QR cannot inherit the CU gift promise',()=>{
+  const m=E.recommend({...groupBase,pob:'none',budget:36200,cap:5,collect:'complete',scope:'qr',goal:'cards'},prices);
+  assert.equal(m.groupVenue.id,'allmd');assert.equal(m.products.qrset,1);assert.equal(m.pobMetrics.guaranteedUnique,0);assert.equal(m.pobMetrics.points,0);assert.equal(m.cards,25);
+});
+test('gift-weight changes never exceed budget or capacity and preserve exact cost reconciliation',()=>{
+  for(const priority of ['one','balanced','collect'])for(const kind of ['any','individual','unit'])for(const budget of [22000,44500,50000,100000])for(const cap of [3,5,8]){
+    const m=E.recommend({...pobBase,pobPriority:priority,pobKind:kind,budget,cap},prices,2000);if(m.empty)continue;
+    assert.ok(m.checkoutTotal<=budget);assert.ok(m.units<=cap);assert.equal(m.total,m.bundleCost+m.extras.total);assert.ok(Math.abs(m.score-m.albumScore-m.pobMetrics.points)<1e-8);assert.deepEqual(E.giftMetrics(m.offers,{...pobBase,pobPriority:priority,pobKind:kind}).families,m.pobMetrics.families);
+  }
+});
+test('special-gift score retains verified showcase entry priority',()=>{
+  const m=E.recommend({...pobBase,pobPriority:'collect',showcase:'priority',budget:104000,cap:5},prices);
+  assert.equal(m.showcaseEntries,5);assert.equal(m.offers[0].id,'makestar-bite');assert.equal(m.total,104000);
+});
 console.log(`${checks} calculation tests passed.`);
