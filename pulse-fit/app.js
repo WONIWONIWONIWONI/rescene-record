@@ -78,7 +78,7 @@ function quiz(){
 }
 function heading(tag,title,description,action=''){return `<div class="page-head"><div><span class="eyebrow">${tag}</span><h1>${title}</h1><p>${description}</p></div>${action}</div>`;}
 function basketRows(m){return E.catalog.filter(p=>m.products[p.id]>0).map((p,i)=>`<div class="basket-row"><span class="index">${String(i+1).padStart(2,'0')}</span><div><b>${p.name}</b><small>${p.id==='qrset'?'1세트 = QR 앨범 5개':p.tag}</small></div><span class="qty">${m.products[p.id]}${p.id==='qrset'?'세트':'개'}</span><span class="sum">${money(m.products[p.id]*prices[p.id])}</span></div>`).join('');}
-function offerBasketRows(offers){return offers.map((o,i)=>`<div class="basket-row"><span class="index">P${i+1}</span><div><b>${o.seller} · ${o.name}</b><small>${o.gift}</small></div><span class="qty">${o.quantity||1}${o.complete?'세트':'개'}</span><span class="sum">${money(o.price)}</span></div>`).join('');}
+function offerBasketRows(offers){return offers.map((o,i)=>`<div class="basket-row"><span class="index">P${i+1}</span><div><b>${o.seller} · ${o.name}</b><small>${o.additionalPurchase?'추가 수집용 · ':''}${o.gift}</small></div><span class="qty">${o.quantity||1}${o.complete?'세트':'개'}</span><span class="sum">${money(o.price)}</span></div>`).join('');}
 function singleOffersTable(){return `<h3 style="margin-top:25px">단품으로 랜덤 특전 1장 받기</h3><div class="table-wrap"><table><thead><tr><th>판매처</th><th>앨범 단품</th><th>특전</th><th>상품값</th><th>확인 조건</th></tr></thead><tbody>${E.pobOffers.filter(o=>!o.complete).map(o=>`<tr><td>${o.seller}</td><td>${o.name}</td><td>${o.gift}<br><span class="small muted">중복 없는 전종 보장 없음</span></td><td>${money(prices['offer_'+o.id]||o.price)}<br><span class="small muted">${o.editablePrice?'기준가 · 앱 가격 확인':'공식 상품 표시가'}</span></td><td><a class="source-link" style="margin:0" href="${o.source}" target="_blank" rel="noopener noreferrer">판매처 확인 ↗</a><br><span class="small muted">${o.channel}</span></td></tr>`).join('')}</tbody></table></div><p class="data-note">배민·CU 단품의 랜덤 특전 1장 조건은 사용자 안내를 적용했고, CU는 공개된 예약 특전 안내와 대조했습니다. 단품 가격은 앱 상품 화면을 직접 확인하지 못해 기존 할인가·세트 단가 기준으로 산정했습니다. 실제 결제 가격은 가격 설정에서 수정하세요. CU는 10/14 15:00 오픈 예정 안내이며 한정 수량·예약 일정은 앱에서 확인해야 합니다. <a class="source-link" style="margin:0" href="https://www.youtube.com/post/UgkxutpUnwsxlK98JYC3GM9nKhLWSBpIVVKY" target="_blank" rel="noopener noreferrer">CU 특전 공개 안내 참고 ↗</a></p>`;}
 function pobDataSection(){
   const complete=E.pobOffers.filter(o=>o.complete),total=complete.reduce((sum,o)=>sum+o.price,0);
@@ -115,7 +115,16 @@ function rationale(m){
   if(answers.collect==='complete')r.push(answers.trade==='no'?'교환 없이 모으는 조건에서는 풀별 예상 수집 종류 수를 활용했습니다. 랜덤 개봉으로 완성을 보장할 수는 없습니다.':answers.trade==='buy'?'추가 앨범 반복 구매보다 부족한 도안의 선택 구매를 권합니다. 중고·분철 가격은 확인되지 않아 합계에 넣지 않았습니다.':'교환을 전제로 같은 풀 안에서 필요한 카드 수를 채우는 조합을 우선했습니다. 교환 성사와 비용은 별도로 확인해야 합니다.');
   if(answers.collect==='member')r.push('최애 중심 수집은 멤버 선택 가능 상품이나 교환이 효율적입니다. 기본 QR 단품은 버전 랜덤이므로 최애를 확정해 주지 않으며, 멤버별 도안 배분 미공개로 완성 수량을 단정하지 않습니다.');
   if(answers.music==='cd'&&m.books===0)r.push('현재 예산·수량에서는 CD 포함 상품을 살 수 없습니다. 이 조합은 CD 조건을 충족하지 못하므로 구매 보류 또는 예산 재설정을 권합니다.');
-  if(m.offers.length)r.push(`특전 구매 조건을 먼저 충족하고, 세트에 포함된 실물 ${m.units-m.extras.units}개도 수집 목표에 합산했습니다. 별도로 필요한 앨범만 추가했습니다. 특전과 봉입 포카는 구분하며, 판매처별 배송비·응모 조건은 따로 확인하세요.`);
+  if(m.initialCounts&&m.additionalCounts){
+    const names={s:'Standard',l:'Limited',q:'QR',w:'Wappen'},scopeKeys={standard:['s'],limited:['l'],qr:['q'],wappen:['w'],all:['s','l','q','w']};
+    const need=E.requirements(answers.scope,answers.trade==='no'?'no':'yes');
+    for(const key of ['s','l','q','w'])if(m.initialCounts[key]>0&&m.additionalCounts[key]>0){
+      const count=m.counts[key],collecting=answers.collect==='complete'&&(scopeKeys[answers.scope]||[]).includes(key);
+      r.push(`${names[key]}은 특전·응모 상품에 든 ${m.initialCounts[key]}개를 이미 반영했고, ${collecting?'봉입 포카 수집 목표에 맞춰':'답변에서 정한 포카 수집 우선순위에 맞춰'} ${m.additionalCounts[key]}개를 더해 총 ${count}개입니다.${collecting?` ${answers.trade==='no'?'풀별 완성 확률 90% 참고 수량':'교환 전제 최소 수량'}은 ${need[key]}개${count<need[key]?'로, 현재 조합은 '+(need[key]-count)+'개 부족한 부분 수집 계획입니다': '이며 완성은 보장하지 않습니다'}.`:''}`);
+    }
+  }
+  if(m.offers.some(o=>o.additionalPurchase))r.push('추가 앨범도 같은 구성·같거나 낮은 가격의 특전 상품이 있으면 선택한 판매처로 연결했습니다. 단품 특전은 랜덤이며 기존 미공포와 중복될 수 있습니다. 앱 기준가는 실제 가격·증정 기간을 확인하세요.');
+  if(m.offers.length)r.push(`특전·응모 상품의 앨범도 봉입 포카와 보관 수량에 한 번씩 포함했습니다. 추가 수량은 수집 목표와 예산 안에서 계산했습니다. 특전과 봉입 포카는 구분하며, 판매처별 배송비·응모 조건은 따로 확인하세요.`);
   r.push(`상품 ${money(m.total)} + 별도 예약액 ${money(shipping)} = ${money(m.total+shipping)}. 예산 ${answers.budgetUnlimited?'무제한':money(answers.budget)}와 보관 상한 ${answers.cap}개 안에서 비교했습니다.`);
   return r;
 }

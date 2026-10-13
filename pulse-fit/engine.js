@@ -146,12 +146,30 @@
         products.standard+=additional;bundleCost+=additional*showcaseEvent.price;entries+=additional;
         initial=productCounts(products);units+=additional;
       }
-      const extras=optimize({...a,budget:a.budgetUnlimited?0:a.budget-bundleCost,initialCounts:initial},prices,shipping);
-      if(extras.empty)continue;
-      for(const p of catalog)products[p.id]+=extras.products[p.id];
+      // Prefer an equivalent bonus-bearing listing from an already selected seller.
+      // Its albums replace general extras; they never add a second copy of those extras.
+      const routes={},extraPrices={...prices};
+      for(const p of catalog){
+        const candidates=available.filter(o=>Object.keys(o.products).length===1&&o.products[p.id]===1&&o.price<=prices[p.id]&&(!o.showcaseSeller||status==='open')&&offers.some(base=>base.seller===o.seller&&Object.keys(base.products).some(id=>id===p.id||(p.id==='qr'&&id==='qrset'))&&(base.source===o.source||!base.showcaseSeller&&!o.showcaseSeller)));
+        candidates.sort((x,y)=>x.price-y.price||Number(y.verified)-Number(x.verified));
+        if(candidates[0]){routes[p.id]=candidates[0];extraPrices[p.id]=candidates[0].price;}
+      }
+      const optimized=optimize({...a,budget:a.budgetUnlimited?0:a.budget-bundleCost,initialCounts:initial},extraPrices,shipping);
+      if(optimized.empty)continue;
+      const initialCounts={...initial},additionalCounts=productCounts(optimized.products);
+      const remaining={...optimized.products};
+      for(const p of catalog){
+        const n=optimized.products[p.id];products[p.id]+=n;
+        if(!n||!routes[p.id])continue;
+        const offer=routes[p.id];
+        offers.push({...offer,quantity:n,price:n*offer.price,products:{[p.id]:n},entryCount:(offer.entryCount||0)*n,additionalPurchase:true,gift:offer.complete?`${offer.gift} · 각 세트 기준`:`${offer.gift} · 앨범별 증정 조건 확인`});
+        entries+=(offer.entryCount||0)*n;bundleCost+=n*offer.price;remaining[p.id]=0;
+      }
+      const remainingCounts=productCounts(remaining);
+      const extras={...optimized,products:remaining,counts:remainingCounts,total:catalog.reduce((sum,p)=>sum+remaining[p.id]*prices[p.id],0),units:remainingCounts.s+remainingCounts.l+remainingCounts.q+remainingCounts.w,chart:remainingCounts.s+remainingCounts.l+remainingCounts.q,cards:remainingCounts.s*3+remainingCounts.l*2+remainingCounts.q*5+remainingCounts.w,books:remainingCounts.s+remainingCounts.l,qrsets:remaining.qrset};
       const counts=productCounts(products),total=bundleCost+extras.total;
       const totalUnits=counts.s+counts.l+counts.q+counts.w;
-      const m={...extras,products,counts,total,units:totalUnits,chart:counts.s+counts.l+counts.q,cards:counts.s*3+counts.l*2+counts.q*5+counts.w,books:counts.s+counts.l,qrsets:products.qrset,offers,extras,bundleCost,showcaseEntries:active?entries:0,showcasePotential:entries,showcaseStatus:status,showcaseTarget:target,showcaseShortfall:active&&a.showcase==='target'?Math.max(0,target-entries):0};
+      const m={...extras,products,counts,total,units:totalUnits,chart:counts.s+counts.l+counts.q,cards:counts.s*3+counts.l*2+counts.q*5+counts.w,books:counts.s+counts.l,qrsets:products.qrset,offers,extras,bundleCost,initialCounts,additionalCounts,showcaseEntries:active?entries:0,showcasePotential:entries,showcaseStatus:status,showcaseTarget:target,showcaseShortfall:active&&a.showcase==='target'?Math.max(0,target-entries):0};
       const eventScore=active?(a.showcase==='priority'?entries:Math.min(entries,target)):0;
       const bestEvent=best&&active?(a.showcase==='priority'?best.showcaseEntries:Math.min(best.showcaseEntries,target)):0;
       if(!best||eventScore>bestEvent||(eventScore===bestEvent&&(m.score>best.score+1e-8||(Math.abs(m.score-best.score)<1e-8&&m.total<best.total))))best=m;

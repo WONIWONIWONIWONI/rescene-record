@@ -49,7 +49,7 @@ test('all seven special bundles total 564,200 and count 32 actual units',()=>{
 test('special-bundle albums contribute to full album-photocard goals',()=>{
   const m=E.recommend({...base,pob:'all',budgetUnlimited:true,cap:50,goal:'cards',collect:'complete',scope:'all'},prices);
   assert.equal(m.total,608700);assert.equal(m.units,37);assert.equal(m.products.qrset,2);assert.equal(m.products.standard,15);assert.equal(m.products.limited,5);assert.equal(m.products.wappen,7);
-  assert.equal(m.extras.products.standard,0);assert.equal(m.extras.products.limited,0);assert.equal(m.extras.products.wappen,0);assert.equal(m.extras.products.qrset,1);
+  assert.equal(m.extras.products.standard,0);assert.equal(m.extras.products.limited,0);assert.equal(m.extras.products.wappen,0);assert.equal(m.additionalCounts.q,5);assert.equal(m.offers.find(o=>o.id==='cu-qr'&&o.additionalPurchase).quantity,1);
 });
 test('one-photo special request can use a verified single album',()=>{
   const m=E.recommend({...base,pob:'want',pobOffer:'auto',budget:20800,cap:1,music:'cd'},prices);
@@ -136,5 +136,45 @@ test('showcase max agrees with independent per-album capacity calculation',()=>{
     assert.equal(m.showcaseEntries,Math.min(cap,Math.max(0,Math.floor((budget-2000)/20800))));
     assert.ok(m.empty||m.total+2000<=budget);assert.ok(m.units<=cap);
   }
+});
+
+
+test('reported CU Wappen screenshot preserves four actual albums but routes the extra two to CU',()=>{
+  const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'complete',scope:'all'},prices);
+  assert.equal(m.total,109000);assert.equal(m.units,8);assert.equal(m.cards,19);assert.equal(m.products.wappen,4);
+  assert.equal(m.initialCounts.w,2);assert.equal(m.additionalCounts.w,2);assert.equal(m.extras.products.wappen,0);
+  const more=m.offers.find(o=>o.additionalPurchase&&o.id==='cu-wappen-single');assert.equal(more.quantity,2);assert.equal(more.price,22200);
+});
+test('a keepsake buyer never buys extra Wappen simply because CU has gifts',()=>{
+  const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'keepsake'},prices);
+  assert.equal(m.products.wappen,2);assert.equal(m.additionalCounts.w,0);assert.equal(m.offers.filter(o=>o.additionalPurchase).length,0);
+});
+test('CU bundle albums satisfy two of five enclosed-card trade draws, with only three added',()=>{
+  const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:55500,cap:5,collect:'complete',scope:'wappen',goal:'object'},prices);
+  assert.equal(m.products.wappen,5);assert.equal(m.total,55500);assert.equal(m.cards,5);assert.equal(m.offers.find(o=>o.additionalPurchase).quantity,3);
+});
+test('costlier retailer extras do not replace an otherwise equivalent cheaper general album',()=>{
+  const p={...prices,'offer_cu-wappen-single':12000};
+  const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:55500,cap:5,collect:'complete',scope:'wappen',goal:'object'},p);
+  assert.equal(m.products.wappen,5);assert.equal(m.extras.products.wappen,3);assert.equal(m.offers.length,1);assert.equal(m.total,55500);
+});
+test('discounted retailer extras use their actual price during optimization',()=>{
+  const p={...prices,'offer_cu-wappen-single':10000};
+  const m=E.recommend({...base,pob:'want',pobOffer:'cu-wappen',budget:52200,cap:5,collect:'complete',scope:'wappen',goal:'object'},p);
+  assert.equal(m.products.wappen,5);assert.equal(m.total,52200);assert.equal(m.offers.find(o=>o.additionalPurchase).price,30000);
+});
+test('routed retailer purchases reconcile products, price, physical units and cards without double counting',()=>{
+  for(const offer of E.pobOffers)for(const scope of ['standard','limited','qr','wappen','all']){
+    const m=E.recommend({...eventBase,pob:'want',pobOffer:offer.id,budget:400000,cap:25,collect:'complete',scope},prices,2000);
+    if(m.empty)continue;
+    const products={...m.extras.products};
+    for(const o of m.offers)for(const [id,n] of Object.entries(o.products))products[id]+=n;
+    assert.deepEqual(products,m.products);assert.equal(m.total,m.offers.reduce((n,o)=>n+o.price,0)+m.extras.total);
+    const c=E.productCounts(products);assert.equal(m.units,c.s+c.l+c.q+c.w);assert.equal(m.cards,c.s*3+c.l*2+c.q*5+c.w);assert.ok(m.total+2000<=400000);assert.ok(m.units<=25);
+  }
+});
+test('MakeStar collection extras routed to its showcase listing update entries once',()=>{
+  const m=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-showcase-single',showcase:'target',showcaseTarget:1,budget:200000,cap:8,collect:'complete',scope:'standard',goal:'balanced'},prices);
+  assert.equal(m.products.standard,5);assert.equal(m.showcaseEntries,5);assert.equal(m.total,150000);assert.equal(m.units,8);assert.equal(m.cards,23);
 });
 console.log(`${checks} calculation tests passed.`);

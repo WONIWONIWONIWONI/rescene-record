@@ -48,3 +48,9 @@ run("answers={...defaults,pob:'want',pobOffer:'makestar-bite',budget:104000,cap:
 assert.equal(run("validAnswers({showcase:'fake',showcaseTarget:200}).showcase"),'none');assert.equal(run("validAnswers({showcase:'target',showcaseTarget:0}).showcaseTarget"),1);
 run("view='pob';pobPage();");assert.ok(mainMarkup.includes('후즈팬 · 쇼케이스'));assert.ok(mainMarkup.includes('370명 선발'));assert.ok(mainMarkup.includes('안전 컷이나 당첨 확률을 추정하지 않습니다'));
 console.log('PASS showcase question validation, budgets, opt-out, gifts, result summary and event guide.');
+
+run("answers={...defaults,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'complete',scope:'all'};view='result';results();");
+assert.ok(mainMarkup.includes('CU · Wappen 단품'));assert.ok(mainMarkup.includes('추가 수집용'));assert.ok(mainMarkup.includes('특전·응모 상품에 든 2개를 이미 반영'));assert.ok(mainMarkup.includes('2개를 더해 총 4개'));assert.ok(mainMarkup.includes('1개 부족한 부분 수집 계획'));assert.ok(mainMarkup.includes('109,000원'));
+assert.equal(run('result.extras.products.wappen'),0);assert.ok(run('summaryText()').includes('CU Wappen 단품 × 2'));
+run("answers={...defaults,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'keepsake'};results();");assert.ok(!mainMarkup.includes('CU · Wappen 단품'));assert.equal(run('result.products.wappen'),2);
+console.log('PASS same-price CU replacement, collection shortfall explanation and no repeated keepsake Wappen.');
