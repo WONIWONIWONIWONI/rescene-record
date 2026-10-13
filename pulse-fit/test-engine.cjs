@@ -177,4 +177,57 @@ test('MakeStar collection extras routed to its showcase listing update entries o
   const m=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-showcase-single',showcase:'target',showcaseTarget:1,budget:200000,cap:8,collect:'complete',scope:'standard',goal:'balanced'},prices);
   assert.equal(m.products.standard,5);assert.equal(m.showcaseEntries,5);assert.equal(m.total,150000);assert.equal(m.units,8);assert.equal(m.cards,23);
 });
+
+
+const groupBase={...eventBase,groupbuy:'compare',groupShipping_allmd:null,groupShipping_ktown:null};
+test('group-buy prices match each of the supplied guide rows',()=>{
+  assert.deepEqual(E.groupBuys.find(g=>g.id==='allmd').prices,{standard:16900,limited:21100,qr:7300,qrset:36200,wappen:9100});
+  assert.deepEqual(E.groupBuys.find(g=>g.id==='ktown').prices,{standard:17400,limited:21800,qr:8200,qrset:40700,wappen:9800});
+});
+test('group albums have the same enclosed contents, without retailer gifts or event entries',()=>{
+  const m=E.recommend({...groupBase,budget:72400,cap:10,goal:'chart'},prices);
+  assert.equal(m.groupVenue.id,'allmd');assert.equal(m.products.qrset,2);assert.equal(m.units,10);assert.equal(m.cards,50);assert.equal(m.total,72400);assert.equal(m.offers.length,0);assert.equal(m.showcaseEntries,0);assert.equal(m.orderShipping,0);assert.equal(m.groupShippingUnknown,false);
+});
+test('unknown shipping is explicitly conditional, while known shipping enforces budget',()=>{
+  const a={...groupBase,budget:16900,cap:1,music:'cd'};
+  const m=E.recommend(a,prices);assert.equal(m.total,16900);assert.equal(m.groupShippingUnknown,true);
+  assert.ok(E.recommend({...a,groupShipping_allmd:4000,groupShipping_ktown:4000},prices).empty);
+});
+test('a sufficiently expensive group delivery can make the regular purchase cheaper',()=>{
+  const m=E.recommend({...groupBase,budget:25000,cap:1,music:'cd',groupShipping_allmd:5000,groupShipping_ktown:5000},prices);
+  assert.equal(m.products.standard,1);assert.equal(m.total,20800);assert.equal(m.groupVenue,null);assert.equal(m.checkoutTotal,20800);
+});
+test('free shipping counts the ALL MD order only, never the CU event subtotal',()=>{
+  const m=E.recommend({...groupBase,pob:'want',pobOffer:'cu-wappen',budget:70000,cap:7,collect:'complete',scope:'qr',goal:'cards',groupShipping_allmd:4000,groupShipping_ktown:4000},prices);
+  assert.equal(m.groupSubtotal,36200);assert.equal(m.total,58400);assert.equal(m.orderShipping,4000);assert.equal(m.checkoutTotal,62400);assert.equal(m.groupShippingUnknown,false);
+});
+test('CU special requirement remains at full event price and cheaper extra Wappen use group price',()=>{
+  const m=E.recommend({...groupBase,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'complete',scope:'all'},prices);
+  assert.equal(m.offers[0].price,22200);assert.equal(m.offers.length,1);assert.equal(m.groupVenue.id,'allmd');assert.equal(m.products.wappen,5);assert.equal(m.extras.products.wappen,3);assert.equal(m.extras.itemPrices.wappen,9100);assert.equal(m.total,94800);assert.equal(m.cards,15);assert.equal(m.units,8);
+});
+test('group prices cannot discount a five-entry showcase product',()=>{
+  const m=E.recommend({...groupBase,pob:'want',pobOffer:'makestar-bite',showcase:'target',showcaseTarget:5,budget:104000,cap:5},prices);
+  assert.equal(m.total,104000);assert.equal(m.showcaseEntries,5);assert.equal(m.groupSubtotal,0);assert.equal(m.products.standard,5);
+});
+test('mixed regular/group items retain actual per-product source and group delivery subtotal',()=>{
+  const p={...prices,standard:10000};
+  const m=E.recommend({...groupBase,budget:21300,cap:2,music:'cd',groupShipping_allmd:1000,groupShipping_ktown:1000},p,3000);
+  assert.equal(m.products.standard,1);assert.equal(m.products.qr,1);assert.equal(m.extras.itemPrices.standard,10000);assert.equal(m.extras.itemSources.standard,'');assert.equal(m.extras.itemSources.qr,'ALL MD 총공 공구');assert.equal(m.groupSubtotal,7300);assert.equal(m.orderShipping,1000);assert.equal(m.checkoutTotal,21300);
+});
+test('group offer deadlines remove expired prices without changing special-event eligibility',()=>{
+  const m=E.recommend({...groupBase,groupbuy:'ktown',now:Date.parse('2026-11-03T08:00:01Z'),budget:50000,cap:3},prices);
+  assert.equal(m.groupExpired,true);assert.equal(m.groupVenue,null);assert.equal(m.total,40800);
+});
+test('delivery does not cause unnecessary extra keepsake albums just to reach a free threshold',()=>{
+  const m=E.recommend({...groupBase,budget:100000,cap:20,groupShipping_allmd:3000,groupShipping_ktown:3000},prices);
+  assert.equal(m.units,4);assert.equal(m.products.standard,1);assert.equal(m.products.limited,1);assert.equal(m.products.qr,1);assert.equal(m.products.wappen,1);
+});
+test('group/retailer baskets reconcile costs and quantities within both limits',()=>{
+  for(const budget of [0,30000,70000,110000,400000])for(const cap of [1,3,8,25])for(const pob of ['none','want']){
+    const m=E.recommend({...groupBase,budget,cap,pob,pobOffer:'cu-wappen',collect:'complete',scope:'all',groupShipping_allmd:4000,groupShipping_ktown:3500},prices,2000);
+    if(m.empty)continue;
+    const products={...m.extras.products};for(const o of m.offers)for(const [id,n] of Object.entries(o.products))products[id]+=n;
+    assert.deepEqual(products,m.products);assert.equal(m.total,m.offers.reduce((sum,o)=>sum+o.price,0)+m.extras.total);assert.equal(m.checkoutTotal,m.total+m.orderShipping+2000);assert.ok(m.checkoutTotal<=budget);assert.ok(m.units<=cap);assert.equal(m.showcaseEntries,0);
+  }
+});
 console.log(`${checks} calculation tests passed.`);

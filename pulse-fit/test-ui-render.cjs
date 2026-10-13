@@ -13,7 +13,7 @@ const document={
 const context={document,localStorage:{getItem(){return null;},setItem(){}},location:{hash:'',origin:'https://example.test',pathname:'/'},navigator:{clipboard:{async writeText(){}}},console,Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-13T11:00:00Z']));}static now(){return Date.parse('2026-10-13T11:00:00Z');}},clearTimeout,setTimeout,FormData:class{},window:{scrollTo(){},addEventListener(){},print(){}}};
 vm.createContext(context);vm.runInContext(fs.readFileSync('pulse-fit/engine.js','utf8'),context);vm.runInContext(fs.readFileSync('pulse-fit/app.js','utf8'),context);
 function run(code){return vm.runInContext(code,context);}
-assert.ok(mainMarkup.includes('마음은 이미'));
+assert.ok(mainMarkup.includes('마음은 이미'));assert.equal(run('defaults.groupbuy'),'compare');run("defaults.groupbuy='none';");
 for(let step=0;step<10;step++){run(`step=${step};view='quiz';quiz();`);assert.ok(mainMarkup.includes(`${step+1} / 10`));assert.ok(mainMarkup.includes('id="quiz-next"'));}
 run("answers={...defaults,collect:'complete',scope:'qr'};step=3;quiz();");assert.ok(mainMarkup.includes('scope-select'));
 run("answers={...defaults,cap:12};step=7;quiz();");assert.ok(mainMarkup.includes('cap-value'));
@@ -54,3 +54,12 @@ assert.ok(mainMarkup.includes('CU · Wappen 단품'));assert.ok(mainMarkup.inclu
 assert.equal(run('result.extras.products.wappen'),0);assert.ok(run('summaryText()').includes('CU Wappen 단품 × 2'));
 run("answers={...defaults,pob:'want',pobOffer:'cu-wappen',budget:110000,cap:8,collect:'keepsake'};results();");assert.ok(!mainMarkup.includes('CU · Wappen 단품'));assert.equal(run('result.products.wappen'),2);
 console.log('PASS same-price CU replacement, collection shortfall explanation and no repeated keepsake Wappen.');
+
+run("answers={...defaults,groupbuy:'compare'};step=1;quiz();");assert.ok(mainMarkup.includes('groupbuy-select'));assert.ok(mainMarkup.includes('fee-allmd'));assert.ok(mainMarkup.includes('배송비 미확인'));
+run("answers={...defaults,groupbuy:'compare',budget:110000,cap:8,pob:'want',pobOffer:'cu-wappen',collect:'complete',scope:'all'};view='result';results();");assert.ok(mainMarkup.includes('CU · Wappen 2개 세트'));assert.ok(mainMarkup.includes('ALL MD 총공 공구 · Wappen'));assert.ok(mainMarkup.includes('94,800원'));assert.ok(mainMarkup.includes('1회 무료배송'));assert.equal(run('result.products.wappen'),5);assert.equal(run('result.showcaseEntries'),0);
+run("answers={...defaults,groupbuy:'compare',budget:16900,cap:1,music:'cd'};results();");assert.ok(mainMarkup.includes('16,900원'));assert.ok(mainMarkup.includes('배송비 미확인 · 상품가 기준 조건부 추천'));assert.ok(mainMarkup.includes('배송비 확인 전 잔액'));
+run("answers.groupShipping_allmd=4000;answers.groupShipping_ktown=4000;results();");assert.ok(mainMarkup.includes('구매 보류'));
+run("answers={...defaults,groupbuy:'compare'};settingsOpen();");assert.ok(markup.includes('settings-groupbuy'));assert.ok(markup.includes('groupShipping_allmd'));
+run("calcShop='allmd';calcCounts={standard:0,limited:0,qr:0,qrset:1,wappen:0};view='calculator';calculator();");assert.ok(markup.includes('36,200원'));assert.ok(mainMarkup.includes('calc-shop'));
+assert.equal(run("validAnswers({groupbuy:'<script>',groupShipping_allmd:-1}).groupbuy"),'none');assert.equal(run("validAnswers({groupbuy:'allmd',groupShipping_allmd:4000}).groupShipping_allmd"),4000);
+console.log('PASS group-buy selection, actual purchase labels, shipping status and inputs, calculator and URL validation.');
