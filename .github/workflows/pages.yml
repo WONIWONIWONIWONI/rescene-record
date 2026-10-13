@@ -62,6 +62,7 @@ jobs:
         run: |
           mkdir public
           cp index.html public/index.html
+          cp -R pulse-fit public/pulse-fit
           touch public/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
