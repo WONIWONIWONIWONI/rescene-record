@@ -15,15 +15,18 @@
     {id:'cu-qr',seller:'CU',name:'QR 5종 세트',gift:'중복 없는 미공포',price:44500,products:{qrset:1},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 상품 확인'},
     {id:'cu-wappen',seller:'CU',name:'Wappen 2개 세트',gift:'중복 없는 미공포 · 유닛',price:22200,products:{wappen:2},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 상품 확인'},
     {id:'makestar-yarn',seller:'메이크스타',name:'Standard 5개 세트',gift:'중복 없는 털실냥이 미공포',price:104000,products:{standard:5},complete:true,verified:true,source:'https://www.makestar.com/product/21195',channel:'한 주문에서 5개 구매 · 11/02 23:59 KST까지'},
-    {id:'makestar-bite',seller:'메이크스타',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 한입만 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://www.makestar.com/product/21196',channel:'쇼케이스 상품 · 10/16 23:59 KST 마감 안내'},
+    {id:'makestar-bite',showcaseSeller:'makestar',entryCount:5,seller:'메이크스타',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 한입만 미공포',price:104000,products:{standard:5},complete:true,verified:true,source:'https://www.makestar.com/product/21196',channel:'쇼케이스 상품 · 10/16 23:59 KST 마감 안내'},
     {id:'whosfan-wappen',seller:'후즈팬',name:'Wappen 5개 세트',gift:'중복 없는 미공포 · 개인',price:55500,products:{wappen:5},complete:true,verified:false,source:'https://whosfanstore.com/products/%EC%98%88%ED%8C%90-%ED%8A%B9%EC%A0%84-%EC%A6%9D%EC%A0%95-%EC%9D%B4%EB%B2%A4%ED%8A%B8-rescene-4th-mini-album-pulse-wappen-ver',channel:'예판 특전 이벤트 상품'},
-    {id:'whosfan-showcase',seller:'후즈팬',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://whosfanstore.com/products/1103-%EC%87%BC%EC%BC%80%EC%9D%B4%EC%8A%A4-rescene%EB%A6%AC%EC%84%BC%EB%8A%90-the-4th-mini-album-pulse-standard-ver',channel:'쇼케이스 전용 이벤트 상품'},
+    {id:'whosfan-showcase',showcaseSeller:'whosfan',seller:'후즈팬',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://whosfanstore.com/products/1103-%EC%87%BC%EC%BC%80%EC%9D%B4%EC%8A%A4-rescene%EB%A6%AC%EC%84%BC%EB%8A%90-the-4th-mini-album-pulse-standard-ver',channel:'쇼케이스 전용 이벤트 상품'},
     {id:'makestar-single',seller:'메이크스타',name:'Standard 단품',gift:'털실냥이 미공포 5종 중 랜덤 1장',price:20800,products:{standard:1},complete:false,verified:true,source:'https://www.makestar.com/product/21195',channel:'특전 1장만 필요할 때 · 전종 보장 없음'},
+    {id:'makestar-showcase-single',showcaseSeller:'makestar',entryCount:1,seller:'메이크스타',name:'Standard 단품 · 쇼케이스',gift:'한입만 미공포 5종 중 랜덤 1장',price:20800,products:{standard:1},complete:false,verified:true,source:'https://www.makestar.com/product/21196',channel:'쇼케이스 응모 1회 · 10/16 23:59 KST 마감'},
     {id:'baemin-limited-single',seller:'배민',name:'Limited 단품',gift:'배민 미공포 랜덤 1장',price:26000,products:{limited:1},complete:false,verified:false,editablePrice:true,source:'https://www.baemin.com/',channel:'배민 앱 확인 · 5개 세트 단가 기준가 · 단품 특전은 사용자 안내'},
     {id:'cu-qr-single',seller:'CU',name:'QR 단품',gift:'CU 개인 미공포 랜덤 1장',price:8900,products:{qr:1},complete:false,verified:false,editablePrice:true,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 확인 · 기준가 8,900원'},
     {id:'cu-wappen-single',seller:'CU',name:'Wappen 단품',gift:'CU 유닛 미공포 랜덤 1장',price:11100,products:{wappen:1},complete:false,verified:false,editablePrice:true,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 확인 · 기준가 11,100원'}
   ];
   for(const offer of pobOffers)if(offer.editablePrice)defaultPrices['offer_'+offer.id]=offer.price;
+  const showcaseEvent={seller:'메이크스타',price:20800,opens:'2026-10-13T06:00:00Z',closes:'2026-10-16T14:59:59Z',date:'2026.11.03 20:00 KST',venue:'블루스퀘어 우리WON뱅킹홀',winners:370,source:'https://www.makestar.com/product/21196'};
+  function showcaseStatus(now=Date.now()){const t=Number(now);return t<Date.parse(showcaseEvent.opens)?'upcoming':t>Date.parse(showcaseEvent.closes)?'closed':'open';}
   function productCounts(products){return {s:products.standard||0,l:products.limited||0,q:(products.qr||0)+5*(products.qrset||0),w:products.wappen||0};}
   function choose(n,k) { if(k<0||k>n)return 0; let v=1;for(let i=1;i<=k;i++)v=v*(n-i+1)/i;return v; }
   const probabilityCache = new Map();
@@ -54,6 +57,7 @@
     return {products,total:c.s*prices.standard+c.l*prices.limited+c.w*prices.wappen+split.cost,shipping,units:c.s+c.l+c.q+c.w,chart:c.s+c.l+c.q,cards:c.s*3+c.l*2+c.q*5+c.w,books:c.s+c.l,qrsets:split.qrset,counts:c};
   }
   function profile(a){
+    if(a.showcase==='priority')return {grade:'VI',name:'쇼케이스 참여형',line:'당첨 컷 대신, 내가 정한 예산과 수량 안에서 응모하기.',color:'coral'};
     if(a.goal==='chart')return {grade:'V',name:'초동 응원형',line:'한정된 예산으로 더 많은 집계 가능 앨범을.',color:'coral'};
     if(a.collect==='complete')return {grade:'IV',name:'컬렉션 설계형',line:'중복까지 계획하고, 원하는 포카 풀을 완성하기.',color:'purple'};
     if(a.goal==='cards'||a.collect==='member')return {grade:'III',name:'포카 집중형',line:'앨범보다 손에 남는 포카가 더 중요해요.',color:'blue'};
@@ -114,30 +118,48 @@
     return {...metrics(best,prices,shipping,forceSets),score:best.score,empty:false};
   }
   function recommend(a,prices,shipping=0){
-    if(!a.pob||a.pob==='none')return {...optimize(a,prices,shipping),offers:[]};
+    const wantsShowcase=['target','priority'].includes(a.showcase);
+    const status=showcaseStatus(a.now===undefined?Date.now():a.now);
+    const active=wantsShowcase&&status==='open';
+    const target=Math.max(1,Math.min(100,Number.isInteger(a.showcaseTarget)?a.showcaseTarget:1));
     const selected=a.pobOffer||'auto';
     const available=pobOffers.map(o=>({...o,price:prices['offer_'+o.id]||o.price}));
     const filtered=available.filter(o=>a.pobFormat==='single'?!o.complete:a.pobFormat==='set'?o.complete:true);
-    const groups=a.pob==='all'?[available.filter(o=>o.complete)]:filtered.filter(o=>selected==='auto'||o.id===selected).map(o=>[o]);
+    const groups=!a.pob||a.pob==='none'?[[]]:a.pob==='all'?[available.filter(o=>o.complete)]:filtered.filter(o=>selected==='auto'||o.id===selected).map(o=>[o]);
     let best=null;
-    for(const offers of groups){
+    for(const baseline of groups){
+      const offers=baseline.map(o=>({...o}));
       const products=Object.fromEntries(catalog.map(p=>[p.id,0]));
-      let bundleCost=0;
-      for(const offer of offers){bundleCost+=offer.price;for(const [id,n] of Object.entries(offer.products))products[id]+=n;}
-      const initial=productCounts(products),units=initial.s+initial.l+initial.q+initial.w;
+      let bundleCost=0,entries=0;
+      for(const offer of offers){bundleCost+=offer.price;entries+=offer.entryCount||0;for(const [id,n] of Object.entries(offer.products))products[id]+=n;}
+      let initial=productCounts(products),units=initial.s+initial.l+initial.q+initial.w;
       if(units>a.cap||(!a.budgetUnlimited&&bundleCost+shipping>a.budget))continue;
+      const room=Math.max(0,a.cap-units),cash=a.budgetUnlimited?Infinity:Math.max(0,a.budget-shipping-bundleCost);
+      const possible=Math.min(room,Math.floor(cash/showcaseEvent.price));
+      const additional=active?Math.min(possible,a.showcase==='priority'?room:Math.max(0,target-entries)):0;
+      if(additional){
+        const unit=available.find(o=>o.id==='makestar-showcase-single');
+        const gift=additional>=5?`한입만 미공포 ${Math.floor(additional/5)}세트${additional%5?' + 랜덤 '+additional%5+'장':''} · 한 주문 기준`:`한입만 미공포 랜덤 ${additional}장`;
+        const existing=offers.find(o=>o.id===unit.id);
+        if(existing){const n=existing.entryCount+additional;Object.assign(existing,{quantity:n,price:n*showcaseEvent.price,products:{standard:n},entryCount:n,gift:n>=5?`한입만 미공포 ${Math.floor(n/5)}세트${n%5?' + 랜덤 '+n%5+'장':''} · 한 주문 기준`:`한입만 미공포 랜덤 ${n}장`});}
+        else offers.push({...unit,quantity:additional,price:additional*showcaseEvent.price,products:{standard:additional},entryCount:additional,gift});
+        products.standard+=additional;bundleCost+=additional*showcaseEvent.price;entries+=additional;
+        initial=productCounts(products);units+=additional;
+      }
       const extras=optimize({...a,budget:a.budgetUnlimited?0:a.budget-bundleCost,initialCounts:initial},prices,shipping);
       if(extras.empty)continue;
       for(const p of catalog)products[p.id]+=extras.products[p.id];
       const counts=productCounts(products),total=bundleCost+extras.total;
       const totalUnits=counts.s+counts.l+counts.q+counts.w;
-      const m={...extras,products,counts,total,units:totalUnits,chart:counts.s+counts.l+counts.q,cards:counts.s*3+counts.l*2+counts.q*5+counts.w,books:counts.s+counts.l,qrsets:products.qrset,offers,extras,bundleCost};
-      if(!best||m.score>best.score+1e-8||(Math.abs(m.score-best.score)<1e-8&&m.total<best.total))best=m;
+      const m={...extras,products,counts,total,units:totalUnits,chart:counts.s+counts.l+counts.q,cards:counts.s*3+counts.l*2+counts.q*5+counts.w,books:counts.s+counts.l,qrsets:products.qrset,offers,extras,bundleCost,showcaseEntries:active?entries:0,showcasePotential:entries,showcaseStatus:status,showcaseTarget:target,showcaseShortfall:active&&a.showcase==='target'?Math.max(0,target-entries):0};
+      const eventScore=active?(a.showcase==='priority'?entries:Math.min(entries,target)):0;
+      const bestEvent=best&&active?(a.showcase==='priority'?best.showcaseEntries:Math.min(best.showcaseEntries,target)):0;
+      if(!best||eventScore>bestEvent||(eventScore===bestEvent&&(m.score>best.score+1e-8||(Math.abs(m.score-best.score)<1e-8&&m.total<best.total))))best=m;
     }
     if(best)return best;
     const costs=groups.map(g=>g.reduce((sum,o)=>sum+o.price,0));
     const quantities=groups.map(g=>g.reduce((sum,o)=>sum+Object.entries(o.products).reduce((n,[id,count])=>n+count*(id==='qrset'?5:1),0),0));
-    return {...metrics({s:0,l:0,q:0,w:0},prices,shipping),empty:true,score:0,offers:[],pobBlocked:true,minimumPobCost:Math.min(...costs),minimumPobUnits:Math.min(...quantities)};
+    return {...metrics({s:0,l:0,q:0,w:0},prices,shipping),empty:true,score:0,offers:[],pobBlocked:!!a.pob&&a.pob!=='none',minimumPobCost:Math.min(...costs),minimumPobUnits:Math.min(...quantities),showcaseEntries:0,showcasePotential:0,showcaseStatus:status,showcaseTarget:target,showcaseShortfall:active&&a.showcase==='target'?target:0};
   }
   function pools(c,prices,setsOverride){
     const sets=setsOverride===undefined?qrSplit(c.q,prices).qrset:setsOverride;
@@ -150,6 +172,6 @@
       {key:'wappen',name:'Wappen 포카',n:5,k:1,packs:c.w}
     ].map(p=>({...p,expected:expected(p.n,p.k,p.packs),probability:completion(p.n,p.k,p.packs),minimum:Math.ceil(p.n/p.k),n90:n90(p.n,p.k)}));
   }
-  const api={catalog,pobOffers,defaultPrices,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,recommend,pools,productCounts};
+  const api={catalog,pobOffers,showcaseEvent,showcaseStatus,defaultPrices,completion,expected,n90,requirements,qrSplit,metrics,profile,optimize,recommend,pools,productCounts};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.PulseEngine=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

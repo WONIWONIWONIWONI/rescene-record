@@ -85,4 +85,56 @@ test('app single price overrides affect recommendation and budget feasibility',(
   assert.ok(E.recommend({...a,budget:8900},custom).empty);
   assert.equal(E.recommend({...a,budget:9500},custom).total,9500);
 });
+
+
+const eventBase={...base,now:Date.parse('2026-10-13T11:00:00Z')};
+test('showcase period boundaries distinguish future, open and closed',()=>{
+  assert.equal(E.showcaseStatus(Date.parse('2026-10-13T05:59:59Z')),'upcoming');
+  assert.equal(E.showcaseStatus(Date.parse(E.showcaseEvent.opens)),'open');
+  assert.equal(E.showcaseStatus(Date.parse(E.showcaseEvent.closes)),'open');
+  assert.equal(E.showcaseStatus(Date.parse('2026-10-16T15:00:00Z')),'closed');
+});
+test('own target respects the budget and shows shortfall instead of increasing limits',()=>{
+  const m=E.recommend({...eventBase,showcase:'target',showcaseTarget:5,budget:70000,cap:3},prices,3000);
+  assert.equal(m.showcaseEntries,3);assert.equal(m.showcaseShortfall,2);assert.equal(m.total,62400);assert.equal(m.units,3);assert.equal(m.cards,9);assert.equal(m.offers[0].quantity,3);
+});
+test('showcase priority uses event albums rather than cheap non-event QR entries',()=>{
+  const m=E.recommend({...eventBase,showcase:'priority',goal:'chart',budget:50000,cap:8},prices);
+  assert.equal(m.showcaseEntries,2);assert.equal(m.products.standard,2);assert.ok(m.total<=50000);assert.equal(m.chart,2);
+});
+test('unlimited showcase budget still enforces storage cap',()=>{
+  const m=E.recommend({...eventBase,showcase:'priority',budgetUnlimited:true,cap:8},prices);
+  assert.equal(m.showcaseEntries,8);assert.equal(m.units,8);assert.equal(m.total,166400);assert.ok(m.offers[0].gift.includes('1세트 + 랜덤 3장'));
+});
+test('five-album showcase gift bundle is five entries and counted once for collection',()=>{
+  const m=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-bite',showcase:'target',showcaseTarget:5,collect:'complete',scope:'standard',budget:104000,cap:5},prices);
+  assert.equal(m.showcaseEntries,5);assert.equal(m.total,104000);assert.equal(m.units,5);assert.equal(m.extras.units,0);assert.equal(m.cards,15);
+});
+test('auto special gift and showcase use the same five-album order',()=>{
+  const m=E.recommend({...eventBase,pob:'want',pobFormat:'single',showcase:'target',showcaseTarget:5,budget:104000,cap:5},prices);
+  assert.equal(m.offers.length,1);assert.equal(m.offers[0].id,'makestar-showcase-single');assert.equal(m.showcaseEntries,5);assert.equal(m.total,104000);assert.ok(m.offers[0].gift.includes('1세트'));
+});
+test('non-event purchases and unverified Whosfan conditions never count as MakeStar entries',()=>{
+  const m=E.recommend({...eventBase,pob:'all',showcase:'target',showcaseTarget:5,budget:564200,cap:32},prices);
+  assert.equal(m.showcaseEntries,5);assert.equal(m.products.standard,15);assert.equal(m.units,32);assert.equal(m.total,564200);
+  const yarn=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-yarn',showcase:'target',showcaseTarget:1,budget:104000,cap:5},prices);
+  assert.equal(yarn.showcaseEntries,0);assert.equal(yarn.showcaseShortfall,1);
+});
+test('choosing no entry keeps event gift albums without claiming participation',()=>{
+  const m=E.recommend({...eventBase,pob:'want',pobOffer:'makestar-bite',showcase:'none',budget:104000,cap:5},prices);
+  assert.equal(m.showcaseEntries,0);assert.equal(m.showcasePotential,5);
+});
+test('no new event purchases after deadline or before opening',()=>{
+  for(const now of [Date.parse('2026-10-13T05:00:00Z'),Date.parse('2026-10-17T00:00:00Z')]){
+    const m=E.recommend({...eventBase,now,showcase:'priority',budget:104000,cap:5},prices);
+    assert.equal(m.showcaseEntries,0);assert.equal(m.offers.length,0);
+  }
+});
+test('showcase max agrees with independent per-album capacity calculation',()=>{
+  for(const budget of [0,10000,20800,50000,104000,200000])for(const cap of [1,3,8]){
+    const m=E.recommend({...eventBase,showcase:'priority',budget,cap},prices,2000);
+    assert.equal(m.showcaseEntries,Math.min(cap,Math.max(0,Math.floor((budget-2000)/20800))));
+    assert.ok(m.empty||m.total+2000<=budget);assert.ok(m.units<=cap);
+  }
+});
 console.log(`${checks} calculation tests passed.`);

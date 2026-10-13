@@ -10,13 +10,13 @@ const document={
   querySelector(selector){if(selector.includes('name="shipping"'))return element('shipping');return null;},
   addEventListener(){},createElement(){return element('temporary');},body:{append(){}},execCommand(){return true;}
 };
-const context={document,localStorage:{getItem(){return null;},setItem(){}},location:{hash:'',origin:'https://example.test',pathname:'/'},navigator:{clipboard:{async writeText(){}}},console,clearTimeout,setTimeout,FormData:class{},window:{scrollTo(){},addEventListener(){},print(){}}};
+const context={document,localStorage:{getItem(){return null;},setItem(){}},location:{hash:'',origin:'https://example.test',pathname:'/'},navigator:{clipboard:{async writeText(){}}},console,Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-13T11:00:00Z']));}static now(){return Date.parse('2026-10-13T11:00:00Z');}},clearTimeout,setTimeout,FormData:class{},window:{scrollTo(){},addEventListener(){},print(){}}};
 vm.createContext(context);vm.runInContext(fs.readFileSync('pulse-fit/engine.js','utf8'),context);vm.runInContext(fs.readFileSync('pulse-fit/app.js','utf8'),context);
 function run(code){return vm.runInContext(code,context);}
 assert.ok(mainMarkup.includes('마음은 이미'));
-for(let step=0;step<9;step++){run(`step=${step};view='quiz';quiz();`);assert.ok(mainMarkup.includes(`${step+1} / 9`));assert.ok(mainMarkup.includes('id="quiz-next"'));}
+for(let step=0;step<10;step++){run(`step=${step};view='quiz';quiz();`);assert.ok(mainMarkup.includes(`${step+1} / 10`));assert.ok(mainMarkup.includes('id="quiz-next"'));}
 run("answers={...defaults,collect:'complete',scope:'qr'};step=3;quiz();");assert.ok(mainMarkup.includes('scope-select'));
-run("answers={...defaults,cap:12};step=6;quiz();");assert.ok(mainMarkup.includes('cap-value'));
+run("answers={...defaults,cap:12};step=7;quiz();");assert.ok(mainMarkup.includes('cap-value'));
 run("answers={...defaults};view='result';results();");assert.ok(mainMarkup.includes('40,800원'));assert.ok(mainMarkup.includes('나의 PULSE 구매 보고서'));
 run("answers={...defaults,budget:378500,cap:25,collect:'complete',scope:'all',goal:'cards'};results();");assert.ok(mainMarkup.includes('378,500원'));assert.ok(mainMarkup.includes('교환 전제 최소 25개'));assert.ok(mainMarkup.includes('QR 5종 세트'));
 run("answers={...defaults,budget:0};results();");assert.ok(mainMarkup.includes('지금은 구매 보류'));
@@ -37,4 +37,14 @@ run("answers={...defaults,pob:'want',pobFormat:'single',pobOffer:'cu-qr-single',
 run("prices['offer_cu-qr-single']=9500;persist();");assert.ok(run("JSON.stringify({answers,prices,shipping}).includes('offer_cu-qr-single')"));
 run("view='pob';pobPage();");assert.ok(mainMarkup.includes('9,500원'));assert.ok(mainMarkup.includes('기준가 · 앱 가격 확인'));
 assert.equal(run("validAnswers({pob:'want',pobFormat:'single',pobOffer:'cu-qr'}).pobOffer"),'auto');
-console.log('PASS 9 question templates, all main pages, result branches, calculator and URL input validation (document facade; not browser layout QA).');
+console.log('PASS 10 question templates, all main pages, result branches, calculator and URL input validation (document facade; not browser layout QA).');
+
+run("answers={...defaults,showcase:'target',showcaseTarget:4};step=5;quiz();");assert.ok(mainMarkup.includes('showcase-target'));assert.ok(mainMarkup.includes('당첨 컷'));
+element('showcase-target').value='0';element('quiz-next').onclick();assert.ok(element('quiz-error').textContent.includes('1~100'));assert.equal(run('step'),5);
+element('showcase-target').value='4';element('quiz-next').onclick();assert.equal(run('answers.showcaseTarget'),4);assert.equal(run('step'),6);
+run("answers={...defaults,showcase:'target',showcaseTarget:5,budget:70000,cap:3};view='result';results();");assert.ok(mainMarkup.includes('목표까지 2회 부족'));assert.ok(mainMarkup.includes('Standard 단품 · 쇼케이스'));assert.ok(mainMarkup.includes('62,400원'));assert.ok(run('summaryText()').includes('3회 (구매 계획·컷 미확인)'));
+run("answers={...defaults,showcase:'priority',budgetUnlimited:true,cap:8};results();");assert.ok(mainMarkup.includes('쇼케이스 참여형'));assert.ok(mainMarkup.includes('166,400원'));assert.ok(mainMarkup.includes('한입만 미공포 1세트 + 랜덤 3장'));
+run("answers={...defaults,pob:'want',pobOffer:'makestar-bite',budget:104000,cap:5};results();");assert.ok(mainMarkup.includes('응모 선택 안 함'));assert.ok(mainMarkup.includes('현재 답변에서는 응모를 원하지 않아 0회'));
+assert.equal(run("validAnswers({showcase:'fake',showcaseTarget:200}).showcase"),'none');assert.equal(run("validAnswers({showcase:'target',showcaseTarget:0}).showcaseTarget"),1);
+run("view='pob';pobPage();");assert.ok(mainMarkup.includes('후즈팬 · 쇼케이스'));assert.ok(mainMarkup.includes('370명 선발'));assert.ok(mainMarkup.includes('안전 컷이나 당첨 확률을 추정하지 않습니다'));
+console.log('PASS showcase question validation, budgets, opt-out, gifts, result summary and event guide.');
