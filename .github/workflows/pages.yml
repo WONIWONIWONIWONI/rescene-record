@@ -70,3 +70,33 @@ jobs:
       - name: Publish
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify anonymous PULSE FIT access
+        run: |
+          python - <<'PY'
+          import os
+          import time
+          import urllib.request
+          from pathlib import Path
+
+          base = 'https://woniwoniwoniwoni.github.io/rescene-record/pulse-fit/'
+          revision = os.environ['GITHUB_SHA']
+          for name in ('', 'index.html', 'styles.css', 'engine.js', 'app.js'):
+              expected = (Path('pulse-fit') / (name or 'index.html')).read_bytes()
+              for attempt in range(12):
+                  try:
+                      request = urllib.request.Request(
+                          base + name + '?revision=' + revision,
+                          headers={'User-Agent': 'PULSE-FIT-public-verification'}
+                      )
+                      with urllib.request.urlopen(request, timeout=20) as response:
+                          assert response.status == 200
+                          body = response.read()
+                      assert body == expected, 'Public content differs from the committed file'
+                      print('Anonymous HTTP 200, content verified:', name, len(body), 'bytes')
+                      break
+                  except Exception:
+                      if attempt == 11:
+                          raise
+                      time.sleep(5)
+          print('Public website verified:', base)
+          PY
