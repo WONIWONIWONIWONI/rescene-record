@@ -32,4 +32,9 @@ run("view='pob';pobPage();");assert.ok(mainMarkup.includes('564,200원'));assert
 assert.equal(run("validAnswers({budgetUnlimited:true,pob:'all',pobOffer:'cu-wappen'}).budgetUnlimited"),true);
 assert.equal(run("validAnswers({budgetUnlimited:'true',pob:'fake'}).pob"),'none');
 
+run("answers={...defaults,pob:'want',pobFormat:'single'};step=4;quiz();");assert.ok(mainMarkup.includes('pob-format'));assert.ok(mainMarkup.includes('CU · QR 단품'));assert.ok(!mainMarkup.includes('배민 · Limited 5개 세트'));
+run("answers={...defaults,pob:'want',pobFormat:'single',pobOffer:'cu-qr-single',budget:8900,cap:1};view='result';results();");assert.ok(mainMarkup.includes('CU · QR 단품'));assert.ok(mainMarkup.includes('8,900원'));assert.ok(mainMarkup.includes('개인 미공포 랜덤 1장'));
+run("prices['offer_cu-qr-single']=9500;persist();");assert.ok(run("JSON.stringify({answers,prices,shipping}).includes('offer_cu-qr-single')"));
+run("view='pob';pobPage();");assert.ok(mainMarkup.includes('9,500원'));assert.ok(mainMarkup.includes('기준가 · 앱 가격 확인'));
+assert.equal(run("validAnswers({pob:'want',pobFormat:'single',pobOffer:'cu-qr'}).pobOffer"),'auto');
 console.log('PASS 9 question templates, all main pages, result branches, calculator and URL input validation (document facade; not browser layout QA).');

@@ -63,4 +63,26 @@ test('special offers obey both budget and capacity including separate shipping',
     if(!m.empty)assert.equal(m.offers[0].id,offer.id);
   }
 });
+test('a small-budget single photocard request can select CU QR',()=>{
+  const m=E.recommend({...base,pob:'want',pobFormat:'single',pobOffer:'auto',budget:8900,cap:1},prices);
+  assert.equal(m.offers[0].id,'cu-qr-single');assert.equal(m.total,8900);assert.equal(m.units,1);assert.equal(m.cards,5);assert.equal(m.qrsets,0);
+});
+test('retailer singles keep their separate gift and actual product type',()=>{
+  for(const [id,cost,product] of [['baemin-limited-single',26000,'limited'],['cu-qr-single',8900,'qr'],['cu-wappen-single',11100,'wappen']]){
+    const m=E.recommend({...base,pob:'want',pobFormat:'single',pobOffer:id,budget:cost,cap:1},prices);
+    assert.equal(m.total,cost);assert.equal(m.products[product],1);assert.equal(m.offers[0].complete,false);assert.ok(m.offers[0].gift.includes('랜덤 1장'));
+  }
+});
+test('single and duplicate-free bundle preferences filter automatic recommendations',()=>{
+  const a={...base,pob:'want',pobOffer:'auto',budget:50000,cap:8};
+  assert.equal(E.recommend({...a,pobFormat:'single'},prices).offers[0].complete,false);
+  assert.equal(E.recommend({...a,pobFormat:'set'},prices).offers[0].complete,true);
+  assert.ok(E.recommend({...a,pobFormat:'set',budget:8900,cap:1},prices).empty);
+});
+test('app single price overrides affect recommendation and budget feasibility',()=>{
+  const custom={...prices,'offer_cu-qr-single':9500};
+  const a={...base,pob:'want',pobFormat:'single',pobOffer:'cu-qr-single',cap:1};
+  assert.ok(E.recommend({...a,budget:8900},custom).empty);
+  assert.equal(E.recommend({...a,budget:9500},custom).total,9500);
+});
 console.log(`${checks} calculation tests passed.`);

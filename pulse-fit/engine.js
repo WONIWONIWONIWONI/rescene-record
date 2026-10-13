@@ -12,14 +12,18 @@
   // Seven complete-bundle offers from the user's 2026-10-13 guide. Single option verified at MAKESTAR.
   const pobOffers=[
     {id:'baemin-limited',seller:'배민',name:'Limited 5개 세트',gift:'중복 없는 미공포',price:130000,products:{limited:5},complete:true,verified:false,source:'https://www.baemin.com/',channel:'배민 앱에서 PULSE 검색'},
-    {id:'cu-qr',seller:'CU',name:'QR 5종 세트',gift:'중복 없는 미공포',price:44500,products:{qrset:1},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'포켓CU 앱에서 예약 상품 확인'},
-    {id:'cu-wappen',seller:'CU',name:'Wappen 2개 세트',gift:'중복 없는 미공포 · 유닛',price:22200,products:{wappen:2},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'포켓CU 앱에서 예약 상품 확인'},
+    {id:'cu-qr',seller:'CU',name:'QR 5종 세트',gift:'중복 없는 미공포',price:44500,products:{qrset:1},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 상품 확인'},
+    {id:'cu-wappen',seller:'CU',name:'Wappen 2개 세트',gift:'중복 없는 미공포 · 유닛',price:22200,products:{wappen:2},complete:true,verified:false,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 상품 확인'},
     {id:'makestar-yarn',seller:'메이크스타',name:'Standard 5개 세트',gift:'중복 없는 털실냥이 미공포',price:104000,products:{standard:5},complete:true,verified:true,source:'https://www.makestar.com/product/21195',channel:'한 주문에서 5개 구매 · 11/02 23:59 KST까지'},
     {id:'makestar-bite',seller:'메이크스타',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 한입만 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://www.makestar.com/product/21196',channel:'쇼케이스 상품 · 10/16 23:59 KST 마감 안내'},
     {id:'whosfan-wappen',seller:'후즈팬',name:'Wappen 5개 세트',gift:'중복 없는 미공포 · 개인',price:55500,products:{wappen:5},complete:true,verified:false,source:'https://whosfanstore.com/products/%EC%98%88%ED%8C%90-%ED%8A%B9%EC%A0%84-%EC%A6%9D%EC%A0%95-%EC%9D%B4%EB%B2%A4%ED%8A%B8-rescene-4th-mini-album-pulse-wappen-ver',channel:'예판 특전 이벤트 상품'},
     {id:'whosfan-showcase',seller:'후즈팬',name:'Standard 5개 · 쇼케이스',gift:'중복 없는 미공포',price:104000,products:{standard:5},complete:true,verified:false,source:'https://whosfanstore.com/products/1103-%EC%87%BC%EC%BC%80%EC%9D%B4%EC%8A%A4-rescene%EB%A6%AC%EC%84%BC%EB%8A%90-the-4th-mini-album-pulse-standard-ver',channel:'쇼케이스 전용 이벤트 상품'},
-    {id:'makestar-single',seller:'메이크스타',name:'Standard 단품',gift:'털실냥이 미공포 5종 중 랜덤 1장',price:20800,products:{standard:1},complete:false,verified:true,source:'https://www.makestar.com/product/21195',channel:'특전 1장만 필요할 때 · 전종 보장 없음'}
+    {id:'makestar-single',seller:'메이크스타',name:'Standard 단품',gift:'털실냥이 미공포 5종 중 랜덤 1장',price:20800,products:{standard:1},complete:false,verified:true,source:'https://www.makestar.com/product/21195',channel:'특전 1장만 필요할 때 · 전종 보장 없음'},
+    {id:'baemin-limited-single',seller:'배민',name:'Limited 단품',gift:'배민 미공포 랜덤 1장',price:26000,products:{limited:1},complete:false,verified:false,editablePrice:true,source:'https://www.baemin.com/',channel:'배민 앱 확인 · 5개 세트 단가 기준가 · 단품 특전은 사용자 안내'},
+    {id:'cu-qr-single',seller:'CU',name:'QR 단품',gift:'CU 개인 미공포 랜덤 1장',price:8900,products:{qr:1},complete:false,verified:false,editablePrice:true,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 확인 · 기준가 8,900원'},
+    {id:'cu-wappen-single',seller:'CU',name:'Wappen 단품',gift:'CU 유닛 미공포 랜덤 1장',price:11100,products:{wappen:1},complete:false,verified:false,editablePrice:true,source:'https://cu.bgfretail.com/',channel:'10/14 15:00 오픈 안내 · 포켓CU 확인 · 기준가 11,100원'}
   ];
+  for(const offer of pobOffers)if(offer.editablePrice)defaultPrices['offer_'+offer.id]=offer.price;
   function productCounts(products){return {s:products.standard||0,l:products.limited||0,q:(products.qr||0)+5*(products.qrset||0),w:products.wappen||0};}
   function choose(n,k) { if(k<0||k>n)return 0; let v=1;for(let i=1;i<=k;i++)v=v*(n-i+1)/i;return v; }
   const probabilityCache = new Map();
@@ -112,7 +116,9 @@
   function recommend(a,prices,shipping=0){
     if(!a.pob||a.pob==='none')return {...optimize(a,prices,shipping),offers:[]};
     const selected=a.pobOffer||'auto';
-    const groups=a.pob==='all'?[pobOffers.filter(o=>o.complete)]:pobOffers.filter(o=>selected==='auto'||o.id===selected).map(o=>[o]);
+    const available=pobOffers.map(o=>({...o,price:prices['offer_'+o.id]||o.price}));
+    const filtered=available.filter(o=>a.pobFormat==='single'?!o.complete:a.pobFormat==='set'?o.complete:true);
+    const groups=a.pob==='all'?[available.filter(o=>o.complete)]:filtered.filter(o=>selected==='auto'||o.id===selected).map(o=>[o]);
     let best=null;
     for(const offers of groups){
       const products=Object.fromEntries(catalog.map(p=>[p.id,0]));
